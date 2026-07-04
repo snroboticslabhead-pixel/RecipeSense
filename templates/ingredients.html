@@ -1,0 +1,1300 @@
+{% extends "base.html" %}
+{% block title %}Add Ingredients — RecipeSense{% endblock %}
+{% block nav_title %}Add Ingredients{% endblock %}
+{% block extra_head %}
+<style>
+.cat-scroll::-webkit-scrollbar { display: none; }
+.cat-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Category pills (oval with border) ── */
+.cat-bar {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 10px 0 12px;
+    scroll-behavior: smooth;
+}
+.cat-pill {
+    flex-shrink: 0;
+    padding: 8px 18px;
+    border-radius: 999px;
+    background: #fff;
+    border: 2px solid #E9E9EB;
+    color: #686b78;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .18s ease;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+.cat-pill:hover {
+    border-color: #EA580C;
+    color: #EA580C;
+    background: #FFF7ED;
+}
+.cat-pill:active { transform: scale(0.95); }
+.cat-pill.active {
+    background: #EA580C;
+    color: #fff;
+    border-color: #EA580C;
+}
+.cat-pill .cat-emoji { font-size: 14px; line-height: 1; }
+.cat-pill .cat-count {
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(0,0,0,0.08);
+    padding: 1px 6px;
+    border-radius: 999px;
+    min-width: 18px;
+    text-align: center;
+}
+.cat-pill.active .cat-count {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+}
+
+/* ── Alphabet quick-nav bar (HORIZONTAL SCROLLABLE, OVAL) ── */
+.alpha-bar {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 0 10px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+.alpha-btn {
+    flex-shrink: 0;
+    min-width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: #fff;
+    border: 2px solid #E9E9EB;
+    color: #686b78;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .15s ease;
+    font-family: inherit;
+    padding: 0 6px;
+    white-space: nowrap;
+}
+.alpha-btn:hover {
+    border-color: #EA580C;
+    color: #EA580C;
+    background: #FFF7ED;
+}
+.alpha-btn:active { transform: scale(0.92); }
+.alpha-btn.active {
+    background: #EA580C;
+    color: #fff;
+    border-color: #EA580C;
+}
+.alpha-btn.empty {
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* ── Horizontal scrollable ingredient row per letter (OVAL CARDS) ── */
+.grid-ing {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 0 12px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+.grid-ing::-webkit-scrollbar { display: none; }
+.grid-ing { -ms-overflow-style: none; scrollbar-width: none; }
+.ing-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 999px;
+    border: 2px solid #E9E9EB;
+    background: #fff;
+    cursor: pointer;
+    transition: all .18s ease;
+    font-family: inherit;
+    text-align: left;
+    flex-shrink: 0;
+    width: 160px;
+}
+.ing-card:hover {
+    border-color: #EA580C !important;
+    transform: translateY(-1px);
+}
+.ing-card:active { transform: scale(0.97); }
+.ing-card.selected {
+    border-color: #EA580C !important;
+    background: #FFF7ED !important;
+}
+.ing-card .ing-emoji {
+    font-size: 20px;
+    line-height: 1;
+    flex-shrink: 0;
+    width: 28px;
+    text-align: center;
+}
+.ing-card .ing-name {
+    flex: 1;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #1c1c1c;
+    text-transform: capitalize;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ing-card.selected .ing-name {
+    color: #EA580C;
+    font-weight: 600;
+}
+.ing-card .ing-plus {
+    font-size: 10px;
+    color: #d4d4d4;
+    transition: all .15s;
+}
+.ing-card:hover .ing-plus { color: #EA580C; }
+.ing-card.selected .ing-plus {
+    color: #EA580C;
+    transform: rotate(45deg);
+}
+
+/* ── Letter section header ── */
+.letter-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 0 6px;
+    scroll-margin-top: 200px;
+}
+.letter-header .letter {
+    font-size: 18px;
+    font-weight: 800;
+    color: #EA580C;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+.letter-header .letter-line {
+    flex: 1;
+    height: 2px;
+    background: #f0f0f0;
+}
+.letter-header .letter-count {
+    font-size: 10px;
+    font-weight: 600;
+    color: #93959f;
+    background: #f5f5f5;
+    padding: 2px 7px;
+    border-radius: 999px;
+}
+
+/* ── Search bar (OVAL WITH CLEAR BORDER, FIXED ICON SPACING) ── */
+.search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 2px solid #E9E9EB;
+    border-radius: 999px;
+    transition: all 0.2s ease;
+}
+.search-wrap:focus-within {
+    border-color: #EA580C;
+    box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.08);
+}
+.search-wrap .search-icon {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #93959f;
+    font-size: 14px;
+    pointer-events: none;
+    z-index: 2;
+    transition: color 0.2s ease;
+}
+.search-wrap:focus-within .search-icon {
+    color: #EA580C;
+}
+.search-wrap input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 14px 20px 14px 52px; /* ← 52px left padding clears the icon cleanly */
+    font-size: 14px;
+    font-family: inherit;
+    color: #1c1c1c;
+}
+.search-wrap input::placeholder {
+    color: #b8b8b8;
+}
+.search-wrap input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+}
+
+/* ── Voice button (OVAL) ── */
+.voice-btn {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 2px solid #E9E9EB;
+    border-radius: 999px;
+    color: #93959f;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+.voice-btn:hover {
+    border-color: #EA580C;
+    color: #EA580C;
+    background: #FFF7ED;
+}
+.voice-btn:active { transform: scale(0.95); }
+
+/* ── Popular circle ── */
+.pop-circle {
+    transition: transform .15s;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font: inherit;
+    padding: 4px 0;
+}
+.pop-circle:hover { transform: scale(1.06); }
+.pop-circle:active { transform: scale(0.94); }
+.pop-ring {
+    width: 62px; height: 62px;
+    border-radius: 50%;
+    border: 2px solid #E9E9EB;
+    display: flex; align-items: center; justify-content: center;
+    background: #f5f5f5;
+    transition: border-color .2s ease;
+}
+@media (min-width: 768px) { .pop-ring { width: 72px; height: 72px; } }
+.pop-ring-inner {
+    width: calc(100% - 5px);
+    height: calc(100% - 5px);
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+}
+.pop-ring-inner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pop-ring-inner .pop-emoji { font-size: 24px; line-height: 1; }
+@media (min-width: 768px) { .pop-ring-inner .pop-emoji { font-size: 28px; } }
+.pop-circle.picked .pop-ring {
+    border-color: #EA580C;
+}
+.pop-circle.picked .pop-label { color: #EA580C; font-weight: 700; }
+
+/* ── Find Recipes button (OVAL) ── */
+.find-btn {
+    background: #f5f5f5;
+    color: #93959f;
+    border: 2px solid #E9E9EB;
+    border-radius: 999px;
+    transition: all .2s ease;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.find-btn.active {
+    background: #16a34a;
+    color: #fff;
+    border-color: #16a34a;
+}
+.find-btn.active:hover { background: #15803d; border-color: #15803d; }
+.find-btn.active .find-count {
+    background: rgba(255,255,255,0.22); color: #fff;
+}
+.find-count {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    min-width: 22px;
+    text-align: center;
+    background: #e9e9eb;
+    color: #93959f;
+    transition: all 0.2s ease;
+}
+
+/* ── Clear button (OVAL) ── */
+.clear-btn {
+    background: #fff;
+    border: 2px solid #E9E9EB;
+    border-radius: 999px;
+    color: #93959f;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+.clear-btn:hover {
+    border-color: #fca5a5;
+    color: #e74c3c;
+    background: #fef2f2;
+}
+
+/* ── Mobile "Ingredients ↑" trigger (MOVED UP TO AVOID NAVBAR COLLISION) ── */
+#mobileIngTrigger {
+    position: fixed;
+    bottom: 76px; /* ↑ Moved up from 60px to clear the mobile bottom nav */
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: #fff;
+    border-top: 2px solid #E9E9EB;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+    transition: transform 0.3s cubic-bezier(.16,1,.3,1), opacity 0.25s ease;
+    will-change: transform, opacity;
+}
+#mobileIngTrigger.visible { transform: translateY(0); opacity: 1; }
+#mobileIngTrigger.hidden { transform: translateY(120%); opacity: 0; pointer-events: none; }
+
+/* ── Desktop chip bar (stays at bottom, no mobile nav conflict) ── */
+#selectedBar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: #fff;
+    border-top: 2px solid #E9E9EB;
+    transition: transform 0.3s cubic-bezier(.16,1,.3,1);
+    will-change: transform;
+}
+#selectedBar.visible { transform: translateY(0); }
+#selectedBar.hidden { transform: translateY(100%); }
+
+/* ── Bottom sheet ── */
+#selSheet { transition: transform .3s cubic-bezier(.16,1,.3,1); transform: translateY(100%); will-change: transform; }
+#selSheet.open { transform: translateY(0); }
+#selOverlay { transition: opacity .25s ease; opacity: 0; pointer-events: none; }
+#selOverlay.open { opacity: 1; pointer-events: auto; }
+.sheet-handle { width: 40px; height: 4px; background: #e5e5e5; border-radius: 4px; margin: 10px auto 4px; }
+.sheet-item { transition: background .12s, transform .15s; }
+.sheet-item:active { transform: scale(0.98); background: #fafafa; }
+
+@keyframes chipPop {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+.chip-pop { animation: chipPop .2s cubic-bezier(.16,1,.3,1); }
+
+@keyframes bounceArrow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+.bounce-arrow { animation: bounceArrow 1.4s ease-in-out infinite; }
+
+/* ── Sticky bars wrapper ── */
+.sticky-bars-wrap {
+    position: sticky;
+    top: 56px;
+    z-index: 25;
+    background: #fff;
+    margin: 0 -16px;
+    padding: 0 16px;
+    border-bottom: 2px solid #f0f0f0;
+}
+@media (min-width: 768px) {
+    .sticky-bars-wrap {
+        top: 70px;
+        margin: 0;
+        padding: 0;
+    }
+}
+
+/* ── Category section title ── */
+.section-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+.section-label .label-text {
+    font-size: 11px;
+    font-weight: 700;
+    color: #686b78;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.section-label .label-icon {
+    color: #EA580C;
+    font-size: 11px;
+}
+
+/* ── Chip styling for selected ingredients ── */
+.sel-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #FFF7ED;
+    color: #EA580C;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 6px 6px 14px;
+    border-radius: 999px;
+    border: 2px solid rgba(253, 186, 116, 0.3);
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.sel-chip .chip-name {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sel-chip .chip-x {
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: #FFEDD5;
+    border: 1px solid rgba(253, 186, 116, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: inherit;
+}
+.sel-chip .chip-x:hover { background: #FED7AA; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white min-h-screen">
+    <div class="w-full px-4 md:px-8 lg:px-10 py-5 md:py-8">
+        <div class="max-w-[1200px] mx-auto">
+            
+            <!-- Search Bar (FIXED: Icon no longer collides with text) -->
+            <div class="mb-5 relative">
+                <div class="flex items-center gap-3">
+                    <div class="search-wrap flex-1">
+                        <i class="fa-solid fa-search search-icon"></i>
+                        <input type="text" id="ingredientInput" placeholder="Search for an ingredient..." autocomplete="off">
+                    </div>
+                    <button onclick="startVoiceInput()" id="voiceBtn" class="voice-btn" title="Voice input">
+                        <i class="fa-solid fa-microphone text-[16px]"></i>
+                    </button>
+                </div>
+                <div id="autocomplete" class="absolute left-0 right-0 md:left-auto md:right-auto md:w-[420px] mt-2 bg-white rounded-2xl z-40 border-2 border-[#E9E9EB] max-h-60 overflow-y-auto" style="display:none; box-shadow: 0 8px 24px rgba(0,0,0,0.08);"></div>
+            </div>
+
+            <!-- Popular Ingredients -->
+            <div class="mb-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-[15px] md:text-[17px] font-bold text-[#1c1c1c] tracking-tight">Popular Ingredients</h2>
+                    <span class="text-[11px] text-[#93959f]">Tap to add</span>
+                </div>
+                <div class="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 md:-mx-0 md:px-0 md:grid md:grid-cols-6 lg:grid-cols-8 md:gap-4 cat-scroll">
+                    {% for ing in popular %}
+                    {% set ing_img = ing|popular_ingredient_image %}
+                    <button onclick="toggleIngredient('{{ ing }}')" data-ing="{{ ing }}" class="pop-circle shrink-0 w-[70px] md:w-auto flex flex-col items-center gap-1.5">
+                        <div class="pop-ring">
+                            <div class="pop-ring-inner">
+                                {% if ing_img %}
+                                <img src="{{ ing_img }}" alt="{{ ing }}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                <span class="pop-emoji absolute inset-0 items-center justify-center" style="display:none;">{{ ing|ingredient_emoji }}</span>
+                                {% else %}
+                                <span class="pop-emoji">{{ ing|ingredient_emoji }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="pop-label text-[10px] md:text-[11px] font-medium text-[#1c1c1c] text-center leading-tight capitalize w-[70px] truncate transition-colors">{{ ing }}</span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════
+            STICKY BARS: Categories + Alphabet (Hidden Initially)
+            ═══════════════════════════════════════════════════ -->
+            <div class="sticky-bars-wrap" id="stickyBars" style="display:none;">
+                <div class="section-label">
+                    <i class="fa-solid fa-layer-group label-icon"></i>
+                    <span class="label-text">Categories</span>
+                </div>
+                <div id="categoryBar" class="cat-bar cat-scroll"></div>
+
+                <div class="section-label mt-1" id="alphaLabel">
+                    <i class="fa-solid fa-arrow-down-a-z label-icon"></i>
+                    <span class="label-text">Browse by letter</span>
+                </div>
+                <div id="alphaBar" class="alpha-bar cat-scroll"></div>
+            </div>
+
+            <!-- Search active indicator -->
+            <div id="searchActive" class="mt-3 mb-3 flex items-center gap-2" style="display:none;">
+                <i class="fa-solid fa-filter text-[#EA580C] text-[12px]"></i>
+                <span class="text-[13px] text-[#686b78]">Results for "<span id="searchTerm" class="text-[#1c1c1c] font-semibold"></span>"</span>
+                <button onclick="clearSearch()" class="ml-auto text-[12px] text-[#93959f] hover:text-[#e74c3c] font-medium bg-transparent border-none cursor-pointer font-[inherit]">Clear</button>
+            </div>
+
+            <!-- All Ingredients Grid (alphabetical, OVAL CARDS) -->
+            <div id="ingredientsGrid" class="pb-4 md:pb-8"></div>
+
+            <!-- No results -->
+            <div id="noResults" class="text-center py-12 space-y-3" style="display:none;">
+                <div class="w-14 h-14 bg-[#f5f5f5] rounded-2xl flex items-center justify-center mx-auto">
+                    <i class="fa-solid fa-search text-xl text-[#d4d4d4]"></i>
+                </div>
+                <p class="text-[14px] font-semibold text-[#1c1c1c]">No ingredients found</p>
+                <p class="text-[12px] text-[#93959f]">Try a different search term or category</p>
+            </div>
+
+            <!-- CTA -->
+            <div id="emptyCta" class="mt-4 mb-6 md:mb-0">
+                <div class="rounded-2xl p-5 md:p-7 text-center bg-[#f5f5f5] border-2 border-[#E9E9EB]">
+                    <div class="text-3xl mb-2">🛒</div>
+                    <p class="text-[14px] font-semibold text-[#1c1c1c] mb-1">Start adding ingredients</p>
+                    <p class="text-[12px] text-[#93959f] mb-3">Tap on ingredients above or use the search bar. You can also <a href="/scanner" class="text-[#EA580C] font-semibold hover:underline no-underline inline-flex items-center gap-1"><i class="fa-solid fa-camera text-[10px]"></i>scan your kitchen</a></p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+MOBILE: "Ingredients ↑" bottom trigger (POSITIONED ABOVE NAVBAR)
+══════════════════════════════════════════════════════════════ -->
+<div id="mobileIngTrigger" class="md:hidden hidden">
+    <div class="w-full px-4 py-3 flex items-center justify-between gap-3">
+        <button onclick="openSheet()" id="ingTriggerBtn" class="flex items-center gap-2 bg-transparent border-none cursor-pointer font-[inherit] px-3 py-2 rounded-lg hover:bg-[#f5f5f5] transition-colors shrink-0">
+            <span class="text-[14px] font-bold text-[#1c1c1c]">Ingredients</span>
+            <span id="triggerBadge" class="text-[10px] font-bold text-white bg-[#EA580C] rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">0</span>
+            <i class="fa-solid fa-chevron-up text-[#EA580C] text-[11px] bounce-arrow"></i>
+        </button>
+        <div class="flex items-center gap-2 shrink-0">
+            <button onclick="clearAll()" class="clear-btn">
+                <i class="fa-solid fa-xmark text-[10px]"></i>
+                <span class="hidden xs:inline">Clear</span>
+            </button>
+            <button onclick="findRecipes()" id="findBtn" class="find-btn">
+                <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i>
+                <span>Recipes</span>
+                <span id="findCount" class="find-count">0</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+DESKTOP: Full chip bar (at bottom, no mobile nav conflict)
+══════════════════════════════════════════════════════════════ -->
+<div id="selectedBar" class="hidden md:block">
+    <div class="w-full px-4 md:px-8 lg:px-10 py-3">
+        <div class="max-w-[1200px] mx-auto flex items-center gap-3">
+            <div id="selectedChipsScroll" class="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto cat-scroll py-1 pr-1"></div>
+            <div class="shrink-0 flex items-center gap-2">
+                <button onclick="clearAll()" class="clear-btn">
+                    <i class="fa-solid fa-xmark text-[10px]"></i>
+                    <span class="hidden sm:inline">Clear</span>
+                </button>
+                <button onclick="findRecipes()" id="findBtnDesktop" class="find-btn">
+                    <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i>
+                    <span class="hidden sm:inline">Find </span><span>Recipes</span>
+                    <span id="findCountDesktop" class="find-count">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+MOBILE: Bottom sheet
+══════════════════════════════════════════════════════════════ -->
+<div id="selOverlay" class="fixed inset-0 z-40 bg-black/30 md:hidden" onclick="closeSheet()"></div>
+<div id="selSheet" class="fixed z-50 left-0 right-0 bottom-0 md:hidden bg-white rounded-t-3xl" style="max-height: 70vh;">
+    <div class="sheet-handle"></div>
+    <div class="flex items-center justify-between px-5 py-3 border-b-2 border-[#f0f0f0]">
+        <div class="flex items-center gap-2">
+            <span class="text-[15px] font-bold text-[#1c1c1c]">Selected Ingredients</span>
+            <span id="sheetCount" class="text-[10px] font-bold text-white bg-[#EA580C] rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">0</span>
+        </div>
+        <button onclick="closeSheet()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#f5f5f5] border-none bg-transparent cursor-pointer">
+            <i class="fa-solid fa-xmark text-[#93959f] text-[14px]"></i>
+        </button>
+    </div>
+    <div id="selSheetList" class="overflow-y-auto px-3 py-2 cat-scroll" style="max-height: calc(70vh - 70px); padding-bottom: max(16px, env(safe-area-inset-bottom));"></div>
+</div>
+
+<!-- Bottom spacer to prevent content from hiding under the mobile trigger -->
+<div id="bottomSpacer" class="md:hidden" style="height:0; transition: height .3s ease;"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    var sel = [];
+    var vr = null;
+    var sheetOpen = false;
+    var activeCategory = 'all';
+    var allIngs = {{ all_ingredients|tojson }};
+    var ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+    var CATEGORIES = [
+        { id: 'all',       name: 'All',          emoji: '🍽️', keywords: [] },
+        { id: 'vegetables',name: 'Vegetables',   emoji: '🥬', keywords: ['onion','tomato','potato','carrot','broccoli','lettuce','cucumber','corn','pepper','chili','jalapeño','garlic','ginger','mushroom','spinach','cabbage','capsicum','beans','peas','pumpkin','zucchini','eggplant','radish','beet','celery','asparagus','cauliflower','leek','shallot','scallion','spring onion','sweet potato','yam','turnip','squash','okra','artichoke','kale','arugula','watercress'] },
+        { id: 'fruits',    name: 'Fruits',       emoji: '🍎', keywords: ['apple','banana','orange','lemon','lime','mango','grape','berry','strawberry','blueberry','raspberry','blackberry','cranberry','cherry','peach','plum','pear','melon','watermelon','pineapple','papaya','kiwi','coconut','pomegranate','fig','date','avocado','guava','passion','tangerine','grapefruit','apricot','nectarine','cantaloupe','lychee'] },
+        { id: 'dairy',     name: 'Dairy & Eggs', emoji: '🥛', keywords: ['milk','cheese','butter','yogurt','cream','egg','eggs','ghee','sour cream','mozzarella','parmesan','cheddar','paneer','cottage','ricotta','feta','goat cheese','cream cheese','whipping','half','buttermilk','condensed','evaporated','mascarpone'] },
+        { id: 'meat',      name: 'Meat & Fish',  emoji: '🥩', keywords: ['chicken','beef','pork','lamb','mutton','turkey','duck','veal','bacon','sausage','ham','salami','pepperoni','ground beef','shrimp','fish','salmon','tuna','crab','lobster','prawn','squid','octopus','anchovy','sardine','cod','tilapia','trout','mackerel','haddock','halibut','snapper','seafood'] },
+        { id: 'grains',    name: 'Grains & Pasta',emoji: '🌾', keywords: ['rice','pasta','noodles','bread','flour','tortilla','naan','oats','quinoa','barley','wheat','couscous','bulgur','millet','cornmeal','polenta','arborio','basmati','jasmine','vermicelli','spaghetti','penne','macaroni','fusilli','lasagna','ravioli','tortellini','linguine','fettuccine','roti','chapati','pita','baguette','croissant','bun','roll','cracker','cereal','cornflakes'] },
+        { id: 'spices',    name: 'Spices & Herbs',emoji: '🌿', keywords: ['salt','pepper','cumin','turmeric','paprika','cinnamon','oregano','basil','cilantro','parsley','mint','thyme','rosemary','sage','dill','bay','chili powder','garam','coriander','cardamom','clove','nutmeg','ginger powder','saffron','vanilla','mustard','fenugreek','fennel','anise','tarragon','marjoram','chive','lemongrass','curry'] },
+        { id: 'oils',      name: 'Oils & Sauces',emoji: '🫗', keywords: ['oil','olive oil','vegetable oil','coconut oil','sesame oil','vinegar','soy sauce','fish sauce','sauce','ketchup','mustard sauce','mayonnaise','hot sauce','worcestershire','teriyaki','sriracha','tahini','salsa','chutney','relish','dressing','marinade','gravy','broth','stock','puree','tomato paste','oyster sauce','hoisin'] },
+        { id: 'nuts',      name: 'Nuts & Seeds', emoji: '🥜', keywords: ['peanut','almond','walnut','cashew','pistachio','pecan','hazelnut','macadamia','pine nut','chestnut','sesame','sunflower','pumpkin seed','flax','chia','hemp','poppy','coconut','peanuts','almonds','walnuts','cashews'] },
+        { id: 'sweet',     name: 'Sweeteners',   emoji: '🍯', keywords: ['sugar','honey','syrup','jaggery','molasses','stevia','maple','agave','brown sugar','powdered sugar','cocoa','chocolate','caramel'] },
+        { id: 'beverages', name: 'Beverages',    emoji: '🥤', keywords: ['water','juice','wine','beer','coffee','tea','soda','coconut water','broth','milk','lemonade','smoothie'] },
+        { id: 'pantry',    name: 'Pantry',       emoji: '🫙', keywords: ['cornstarch','baking','yeast','gelatin','pectin','tamarind','lentils','chickpeas','beans','dal','tofu','tempeh','seitan','garam','masala','curry powder','stock cube'] }
+    ];
+
+    var categoryMap = {};
+    CATEGORIES.forEach(function(c) { categoryMap[c.id] = []; });
+    allIngs.forEach(function(ing) {
+        var n = ing.toLowerCase();
+        var matched = false;
+        for (var i = 1; i < CATEGORIES.length; i++) {
+            var cat = CATEGORIES[i];
+            for (var j = 0; j < cat.keywords.length; j++) {
+                if (n.indexOf(cat.keywords[j]) !== -1) {
+                    categoryMap[cat.id].push(ing);
+                    matched = true;
+                    break;
+                }
+            }
+            if (matched) break;
+        }
+        if (!matched) categoryMap['pantry'].push(ing);
+        categoryMap['all'].push(ing);
+    });
+
+    var initialStateHTML = `
+        <div class="text-center py-16 space-y-4">
+            <div class="w-24 h-24 bg-[#FFF7ED] rounded-full flex items-center justify-center mx-auto border-2 border-[#EA580C]/20">
+                <i class="fa-solid fa-basket-shopping text-4xl text-[#EA580C]"></i>
+            </div>
+            <div>
+                <p class="text-[18px] font-bold text-[#1c1c1c]">What's in your kitchen?</p>
+                <p class="text-[14px] text-[#93959f] max-w-sm mx-auto mt-2 leading-relaxed">Tap on the popular ingredients above, choose a category below, or use the search bar to find exactly what you need.</p>
+            </div>
+        </div>
+    `;
+
+    var inp = document.getElementById('ingredientInput');
+    var ac = document.getElementById('autocomplete');
+    var bar = document.getElementById('selectedBar');
+    var mobileTrigger = document.getElementById('mobileIngTrigger');
+    var spacer = document.getElementById('bottomSpacer');
+    var chipsEl = document.getElementById('selectedChipsScroll');
+    var countEl = document.getElementById('findCount');
+    var countElDesktop = document.getElementById('findBtnDesktop');
+    var findBtn = document.getElementById('findBtn');
+    var findBtnDesktop = document.getElementById('findBtnDesktop');
+    var emptyCta = document.getElementById('emptyCta');
+    var searchActive = document.getElementById('searchActive');
+    var searchTerm = document.getElementById('searchTerm');
+    var noResults = document.getElementById('noResults');
+    var alphaBar = document.getElementById('alphaBar');
+    var categoryBar = document.getElementById('categoryBar');
+    var ingredientsGrid = document.getElementById('ingredientsGrid');
+    var selSheet = document.getElementById('selSheet');
+    var selOverlay = document.getElementById('selOverlay');
+    var selSheetList = document.getElementById('selSheetList');
+    var sheetCount = document.getElementById('sheetCount');
+    var triggerBadge = document.getElementById('triggerBadge');
+
+    function buildCategoryBar() {
+        var html = '';
+        CATEGORIES.forEach(function(cat) {
+            var count = categoryMap[cat.id].length;
+            var isActive = activeCategory === cat.id;
+            html += '<button class="cat-pill' + (isActive ? ' active' : '') + '" data-cat="' + cat.id + '" onclick="window.selectCategory(\'' + cat.id + '\')">';
+            html += '<span class="cat-emoji">' + cat.emoji + '</span>';
+            html += '<span>' + cat.name + '</span>';
+            html += '<span class="cat-count">' + count + '</span>';
+            html += '</button>';
+        });
+        categoryBar.innerHTML = html;
+    }
+
+    window.selectCategory = function(catId) {
+        activeCategory = catId;
+        document.getElementById('stickyBars').style.display = '';
+        document.getElementById('alphaLabel').style.display = '';
+        document.getElementById('alphaBar').style.display = '';
+        
+        // Clear search if active to prevent state confusion
+        if (inp.value.trim() !== '') {
+            inp.value = '';
+            searchActive.style.display = 'none';
+            ac.style.display = 'none';
+        }
+        
+        document.querySelectorAll('.cat-pill').forEach(function(p) {
+            p.classList.toggle('active', p.getAttribute('data-cat') === catId);
+        });
+        noResults.style.display = 'none';
+        renderIngredientsGrid();
+        var activePill = document.querySelector('.cat-pill.active');
+        if (activePill) {
+            activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+    };
+
+    function buildAlphaBar() {
+        var currentList = categoryMap[activeCategory] || allIngs;
+        var availableLetters = {};
+        currentList.forEach(function(ing) {
+            var l = ing[0].toUpperCase();
+            if (/[A-Z]/.test(l)) availableLetters[l] = true;
+        });
+        var html = '';
+        ALPHABET.forEach(function(letter) {
+            var hasItems = availableLetters[letter];
+            html += '<button class="alpha-btn' + (hasItems ? '' : ' empty') + '" data-alpha="' + letter + '" onclick="window.scrollToLetter(\'' + letter + '\')">' + letter + '</button>';
+        });
+        alphaBar.innerHTML = html;
+    }
+
+    function renderIngredientsGrid() {
+        var currentList = categoryMap[activeCategory] || allIngs;
+        if (!currentList.length) {
+            ingredientsGrid.innerHTML = '';
+            noResults.style.display = '';
+            return;
+        }
+        noResults.style.display = 'none';
+        var groups = {};
+        currentList.forEach(function(ing) {
+            var l = ing[0].toUpperCase();
+            if (!/[A-Z]/.test(l)) l = '#';
+            if (!groups[l]) groups[l] = [];
+            groups[l].push(ing);
+        });
+        var letters = Object.keys(groups).sort();
+        var html = '';
+        letters.forEach(function(letter) {
+            html += '<div class="letter-section" data-letter="' + letter + '">';
+            html += '<div id="letter-' + letter + '" class="letter-header">';
+            html += '<span class="letter">' + letter + '</span>';
+            html += '<div class="letter-line"></div>';
+            html += '<span class="letter-count">' + groups[letter].length + '</span>';
+            html += '</div>';
+            html += '<div class="grid-ing">';
+            groups[letter].forEach(function(ing) {
+                var isSelected = sel.indexOf(ing) !== -1;
+                html += '<button onclick="toggleIngredient(\'' + ing.replace(/'/g, "\\'") + '\')" data-ing="' + ing + '" class="ing-card' + (isSelected ? ' selected' : '') + '">';
+                html += '<span class="ing-emoji">' + getEmoji(ing) + '</span>';
+                html += '<span class="ing-name">' + ing + '</span>';
+                html += '<i class="fa-solid fa-plus ing-plus"></i>';
+                html += '</button>';
+            });
+            html += '</div></div>';
+        });
+        ingredientsGrid.innerHTML = html;
+        buildAlphaBar();
+    }
+
+    function renderSearchResults(q, pool) {
+        var matches = pool.filter(function(i) { return i.indexOf(q) !== -1; });
+        if (!matches.length) {
+            ingredientsGrid.innerHTML = '';
+            noResults.style.display = '';
+            return;
+        }
+        noResults.style.display = 'none';
+        var html = '<div class="letter-section" data-letter="search">';
+        html += '<div class="letter-header"><span class="letter">Results</span><div class="letter-line"></div><span class="letter-count">' + matches.length + '</span></div>';
+        html += '<div class="grid-ing" style="flex-wrap: wrap;">';
+        matches.forEach(function(ing) {
+            var isSelected = sel.indexOf(ing) !== -1;
+            html += '<button onclick="toggleIngredient(\'' + ing.replace(/'/g, "\\'") + '\')" data-ing="' + ing + '" class="ing-card' + (isSelected ? ' selected' : '') + '">';
+            html += '<span class="ing-emoji">' + getEmoji(ing) + '</span>';
+            html += '<span class="ing-name">' + ing + '</span>';
+            html += '<i class="fa-solid fa-plus ing-plus"></i>';
+            html += '</button>';
+        });
+        html += '</div></div>';
+        ingredientsGrid.innerHTML = html;
+    }
+
+    window.scrollToLetter = function(letter) {
+        var section = document.querySelector('.letter-section[data-letter="' + letter + '"]');
+        if (!section) return;
+        document.querySelectorAll('.alpha-btn').forEach(function(btn) {
+            btn.classList.remove('active');
+        });
+        var activeBtn = document.querySelector('.alpha-btn[data-alpha="' + letter + '"]');
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+            activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+        var header = document.getElementById('letter-' + letter);
+        if (header) {
+            var offset = 240;
+            var top = header.getBoundingClientRect().top + window.pageYOffset - offset;
+            window.scrollTo({ top: top, behavior: 'smooth' });
+        }
+    };
+
+    var scrollTimeout;
+    window.addEventListener('scroll', function() {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(function() {
+            var sections = document.querySelectorAll('.letter-section');
+            var currentLetter = null;
+            var offset = 260;
+            sections.forEach(function(sec) {
+                var rect = sec.getBoundingClientRect();
+                if (rect.top <= offset) currentLetter = sec.getAttribute('data-letter');
+            });
+            if (currentLetter) {
+                document.querySelectorAll('.alpha-btn').forEach(function(btn) {
+                    btn.classList.toggle('active', btn.getAttribute('data-alpha') === currentLetter);
+                });
+                var activeBtn = document.querySelector('.alpha-btn.active');
+                if (activeBtn) {
+                    var barRect = alphaBar.getBoundingClientRect();
+                    var btnRect = activeBtn.getBoundingClientRect();
+                    if (btnRect.left < barRect.left || btnRect.right > barRect.right) {
+                        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }
+                }
+            }
+        }, 50);
+    });
+
+    window.openSheet = function() {
+        if (!sel.length) return;
+        buildSheetList();
+        sheetOpen = true;
+        selOverlay.style.display = '';
+        requestAnimationFrame(function() {
+            selSheet.classList.add('open');
+            selOverlay.classList.add('open');
+        });
+        document.body.style.overflow = 'hidden';
+    };
+
+    window.closeSheet = function() {
+        sheetOpen = false;
+        selSheet.classList.remove('open');
+        selOverlay.classList.remove('open');
+        document.body.style.overflow = '';
+        setTimeout(function() {
+            if (!sheetOpen) selOverlay.style.display = 'none';
+        }, 300);
+    };
+
+    function buildSheetList() {
+        sheetCount.textContent = sel.length;
+        if (!sel.length) {
+            selSheetList.innerHTML = '<div class="text-center py-10 text-[13px] text-[#93959f]">No ingredients selected</div>';
+            return;
+        }
+        var html = '';
+        for (var i = 0; i < sel.length; i++) {
+            var name = sel[i];
+            var safeName = name.replace(/'/g, "\\'");
+            html += '<div class="sheet-item flex items-center gap-3 px-3 py-3 rounded-xl">';
+            html += '  <span class="w-10 h-10 rounded-xl bg-[#FFF7ED] flex items-center justify-center text-[18px] shrink-0">' + getEmoji(name) + '</span>';
+            html += '  <span class="flex-1 text-[14px] text-[#1c1c1c] font-medium capitalize truncate">' + name + '</span>';
+            html += '  <button onclick="window.removeIngredientSheet(\'' + safeName + '\')" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#fef2f2] border-2 border-[#E9E9EB] hover:border-[#fca5a5] bg-white cursor-pointer transition-colors shrink-0">';
+            html += '    <i class="fa-solid fa-xmark text-[11px] text-[#93959f] hover:text-[#e74c3c]"></i>';
+            html += '  </button>';
+            html += '</div>';
+            if (i < sel.length - 1) html += '<div class="mx-4 h-px bg-[#f5f5f5]"></div>';
+        }
+        selSheetList.innerHTML = html;
+    }
+
+    window.removeIngredientSheet = function(name) {
+        removeIngredient(name);
+        if (sel.length) buildSheetList();
+        else closeSheet();
+    };
+
+    inp.addEventListener('input', function() {
+        var q = this.value.toLowerCase().trim();
+        if (q.length < 1) {
+            ac.style.display = 'none';
+            searchActive.style.display = 'none';
+            
+            // Restore alpha bar
+            document.getElementById('alphaLabel').style.display = '';
+            document.getElementById('alphaBar').style.display = '';
+            
+            if (activeCategory === 'all') {
+                ingredientsGrid.innerHTML = initialStateHTML;
+                document.getElementById('stickyBars').style.display = 'none';
+            } else {
+                renderIngredientsGrid();
+            }
+            noResults.style.display = 'none';
+            return;
+        }
+        
+        var searchPool = categoryMap[activeCategory] || allIngs;
+        var matches = searchPool.filter(function(i) { return i.indexOf(q) !== -1; }).slice(0, 12);
+        
+        if (!matches.length) {
+            ac.style.display = 'none';
+            searchActive.style.display = '';
+            searchTerm.textContent = q;
+            ingredientsGrid.innerHTML = '';
+            noResults.style.display = '';
+            return;
+        }
+        
+        var html = '';
+        for (var i = 0; i < matches.length; i++) {
+            var m = matches[i];
+            var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+            var highlighted = m.replace(re, '<strong class="text-[#EA580C]">$1</strong>');
+            var isSel = sel.indexOf(m) !== -1;
+            html += '<button class="w-full text-left px-4 py-3 text-[13px] text-[#1c1c1c] hover:bg-[#f5f5f5] flex items-center justify-between transition-colors border-none bg-transparent cursor-pointer font-[inherit]" onclick="window._acSelect(\'' + m.replace(/'/g, "\\'") + '\')" data-ac-ing="' + m + '">';
+            html += '<div class="flex items-center gap-3"><span class="text-lg">' + getEmoji(m) + '</span><span>' + highlighted + '</span></div>';
+            if (isSel) {
+                html += '<span class="text-[10px] font-bold text-[#48c479] bg-[#eafaf1] px-2 py-0.5 rounded-full border border-[#bbf7d0]">Added</span>';
+            } else {
+                html += '<div class="w-6 h-6 bg-[#FFF7ED] rounded-full flex items-center justify-center border-2 border-[#fdba74]/30"><i class="fa-solid fa-plus text-[#EA580C] text-[9px]"></i></div>';
+            }
+            html += '</button>';
+            if (i < matches.length - 1) html += '<div class="mx-4 h-px bg-[#f5f5f5]"></div>';
+        }
+        ac.innerHTML = html;
+        ac.style.display = '';
+        searchActive.style.display = '';
+        searchTerm.textContent = q;
+        noResults.style.display = 'none';
+        
+        // Hide alpha bar when searching, show categories
+        document.getElementById('alphaLabel').style.display = 'none';
+        document.getElementById('alphaBar').style.display = 'none';
+        document.getElementById('stickyBars').style.display = '';
+        
+        // Render search results directly
+        renderSearchResults(q, searchPool);
+    });
+
+    inp.addEventListener('focus', function() {
+        if (sheetOpen) closeSheet();
+    });
+
+    inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            var v = this.value.trim().toLowerCase();
+            if (v) { addIngredient(v); this.value = ''; ac.style.display = 'none'; }
+        }
+        if (e.key === 'Escape') { ac.style.display = 'none'; }
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#ingredientInput') && !e.target.closest('#autocomplete')) {
+            ac.style.display = 'none';
+        }
+    });
+
+    window._acSelect = function(name) {
+        toggleIngredient(name);
+        inp.value = '';
+        ac.style.display = 'none';
+        inp.focus();
+    };
+
+    function clearSearch() {
+        inp.value = '';
+        searchActive.style.display = 'none';
+        ac.style.display = 'none';
+        
+        // Restore alpha bar
+        document.getElementById('alphaLabel').style.display = '';
+        document.getElementById('alphaBar').style.display = '';
+        
+        noResults.style.display = 'none';
+        
+        if (activeCategory === 'all') {
+            ingredientsGrid.innerHTML = initialStateHTML;
+            document.getElementById('stickyBars').style.display = 'none';
+        } else {
+            renderIngredientsGrid();
+        }
+        inp.focus();
+    }
+    window.clearSearch = clearSearch;
+
+    window.toggleIngredient = function(name) {
+        name = name.toLowerCase().trim();
+        if (!name) return;
+        if (sel.indexOf(name) !== -1) {
+            removeIngredient(name);
+        } else {
+            addIngredient(name);
+        }
+    };
+
+    window.addIngredient = function(name) {
+        name = name.toLowerCase().trim();
+        if (!name || sel.indexOf(name) !== -1) return;
+        sel.push(name);
+        updateUI();
+        animateCard(name, true);
+        updateAutocompleteBadge(name, true);
+        if (sheetOpen) buildSheetList();
+    };
+
+    window.removeIngredient = function(name) {
+        var idx = sel.indexOf(name);
+        if (idx === -1) return;
+        sel.splice(idx, 1);
+        updateUI();
+        animateCard(name, false);
+        updateAutocompleteBadge(name, false);
+    };
+
+    function animateCard(name, isSelected) {
+        var card = document.querySelector('.ing-card[data-ing="' + name + '"]');
+        if (!card) return;
+        if (isSelected) {
+            card.classList.add('selected');
+            card.style.transform = 'scale(0.94)';
+            setTimeout(function() { card.style.transform = ''; }, 160);
+        } else {
+            card.classList.remove('selected');
+        }
+    }
+
+    function updateAutocompleteBadge(name, isSelected) {
+        var acBtn = document.querySelector('[data-ac-ing="' + name + '"]');
+        if (!acBtn) return;
+        var badge = acBtn.querySelector('span:last-child');
+        if (!badge) return;
+        if (isSelected) {
+            badge.outerHTML = '<span class="text-[10px] font-bold text-[#48c479] bg-[#eafaf1] px-2 py-0.5 rounded-full border border-[#bbf7d0]">Added</span>';
+        } else {
+            badge.outerHTML = '<div class="w-6 h-6 bg-[#FFF7ED] rounded-full flex items-center justify-center border-2 border-[#fdba74]/30"><i class="fa-solid fa-plus text-[#EA580C] text-[9px]"></i></div>';
+        }
+    }
+
+    window.clearAll = function() {
+        sel = [];
+        updateUI();
+        if (activeCategory === 'all') {
+            ingredientsGrid.innerHTML = initialStateHTML;
+            document.getElementById('stickyBars').style.display = 'none';
+        } else {
+            renderIngredientsGrid();
+        }
+        if (sheetOpen) closeSheet();
+    };
+
+    window.findRecipes = function() {
+        if (!sel.length) return;
+        window.location.href = '/recipes?ingredients=' + encodeURIComponent(sel.join(','));
+    };
+
+    function updateUI() {
+        if (!sel.length) {
+            mobileTrigger.classList.remove('visible');
+            mobileTrigger.classList.add('hidden');
+            mobileTrigger.style.display = 'none';
+            bar.classList.remove('visible');
+            bar.classList.add('hidden');
+            bar.style.display = 'none';
+            spacer.style.height = '0px';
+            emptyCta.style.display = '';
+            findBtn.classList.remove('active');
+            if (findBtnDesktop) findBtnDesktop.classList.remove('active');
+            if (sheetOpen) closeSheet();
+        } else {
+            emptyCta.style.display = 'none';
+            spacer.style.height = '84px'; /* ↑ Increased to clear the trigger bar */
+            mobileTrigger.style.display = '';
+            mobileTrigger.classList.remove('hidden');
+            mobileTrigger.classList.add('visible');
+            triggerBadge.textContent = sel.length;
+            findBtn.classList.add('active');
+            bar.style.display = '';
+            bar.classList.remove('hidden');
+            bar.classList.add('visible');
+            if (findBtnDesktop) findBtnDesktop.classList.add('active');
+            var html = '';
+            for (var i = 0; i < sel.length; i++) {
+                var safeName = sel[i].replace(/'/g, "\\'");
+                html += '<span class="sel-chip chip-pop">';
+                html += '<span class="chip-name">' + sel[i] + '</span>';
+                html += '<button onclick="window.removeIngredient(\'' + safeName + '\')" class="chip-x"><i class="fa-solid fa-xmark text-[8px]"></i></button>';
+                html += '</span>';
+            }
+            chipsEl.innerHTML = html;
+            chipsEl.scrollLeft = chipsEl.scrollWidth;
+        }
+        countEl.textContent = sel.length;
+        if (countElDesktop) countElDesktop.textContent = sel.length;
+        document.querySelectorAll('.ing-card').forEach(function(card) {
+            var name = card.getAttribute('data-ing');
+            if (name && sel.indexOf(name) !== -1) card.classList.add('selected');
+            else card.classList.remove('selected');
+        });
+        document.querySelectorAll('.pop-circle').forEach(function(btn) {
+            var name = btn.getAttribute('data-ing');
+            if (name && sel.indexOf(name) !== -1) btn.classList.add('picked');
+            else btn.classList.remove('picked');
+        });
+    }
+
+    window.startVoiceInput = function() {
+        var b = document.getElementById('voiceBtn');
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            showToast('Voice not supported', 'error');
+            return;
+        }
+        b.style.color = '#e74c3c';
+        b.style.background = '#fdf2f2';
+        b.style.borderColor = '#fecaca';
+        b.innerHTML = '<i class="fa-solid fa-microphone text-[16px] animate-pulse"></i>';
+        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        vr = new SR();
+        vr.continuous = false;
+        vr.interimResults = false;
+        vr.lang = 'en-US';
+        vr.onresult = function(e) {
+            var text = e.results[0][0].transcript;
+            text.split(/[,;.\s]+and\s+/).map(function(s) { return s.trim().toLowerCase(); }).filter(function(s) { return s.length > 1; }).forEach(function(i) { addIngredient(i); });
+            resetVoiceBtn(b);
+            showToast('Added from voice');
+        };
+        vr.onerror = function() { resetVoiceBtn(b); showToast('Could not hear you', 'error'); };
+        vr.onend = function() { resetVoiceBtn(b); };
+        vr.start();
+    };
+
+    function resetVoiceBtn(b) {
+        b.style.color = '';
+        b.style.background = '';
+        b.style.borderColor = '';
+        b.innerHTML = '<i class="fa-solid fa-microphone text-[16px]"></i>';
+    }
+
+    function getEmoji(name) {
+        var n = name.toLowerCase();
+        var map = {
+            'chicken': '🍗', 'garlic': '🧄', 'onion': '🧅', 'tomato': '🍅',
+            'rice': '🍚', 'eggs': '🥚', 'egg': '🥚', 'cheese': '🧀', 'butter': '🧈',
+            'olive oil': '🫒', 'pasta': '🍝', 'milk': '🥛', 'salt': '🧂',
+            'pepper': '🫑', 'carrot': '🥕', 'potato': '🥔', 'broccoli': '🥦',
+            'cilantro': '🌿', 'parsley': '🌿', 'basil': '🌿', 'ginger': '🫚',
+            'chili': '🌶️', 'cumin': '🫙', 'turmeric': '🟡', 'soy sauce': '🥢',
+            'lemon': '🍋', 'lime': '🍋', 'avocado': '🥑', 'mushroom': '🍄',
+            'shrimp': '🦐', 'fish': '🐟', 'beef': '🥩', 'yogurt': '🥄',
+            'cream': '🥛', 'flour': '🌾', 'sugar': '🍬', 'bread': '🍞',
+            'tortilla': '🌯', 'lettuce': '🥬', 'cucumber': '🥒', 'corn': '🌽',
+            'beans': '🫘', 'lentils': '🫘', 'coconut': '🥥', 'sesame': '🫙',
+            'mint': '🌿', 'oregano': '🌿', 'paprika': '🟠', 'black pepper': '🧂',
+            'garam': '🫙', 'vanilla': '🍦', 'baking': '🫙', 'cocoa': '🍫',
+            'chickpeas': '🫘', 'tahini': '🫙', 'mozzarella': '🧀', 'parmesan': '🧀',
+            'cheddar': '🧀', 'naan': '🫓', 'salsa': '🫙', 'sour cream': '🥄',
+            'noodles': '🍜', 'vermicelli': '🍜', 'peanuts': '🥜', 'fish sauce': '🥢',
+            'tamarind': '🫙', 'jalapeño': '🌶️', 'wine': '🍷', 'broth': '🥣',
+            'puree': '🍅', 'sauce': '🍅', 'arborio': '🍚', 'saffron': '🟡',
+            'ghee': '🧈', 'banana': '🍌', 'syrup': '🍁', 'cornstarch': '🫙',
+            'vinegar': '🫗', 'juice': '🍋', 'olives': '🫒', 'red onion': '🧅',
+            'sweet potato': '🍠', 'ground beef': '🥩', 'honey': '🍯',
+            'apple': '🍎', 'orange': '🍊', 'grape': '🍇', 'strawberry': '🍓',
+            'watermelon': '🍉', 'peach': '🍑', 'cherry': '🍒', 'pineapple': '🍍',
+            'mango': '🥭', 'kiwi': '🥝', 'pear': '🍐', 'plum': '🍑'
+        };
+        for (var key in map) {
+            if (n.indexOf(key) !== -1) return map[key];
+        }
+        if (n.match(/chicken|meat|beef|pork|lamb/)) return '🍖';
+        if (n.match(/fish|shrimp|salmon|seafood/)) return '🐟';
+        if (n.match(/cheese|cream|milk|yogurt|butter/)) return '🧀';
+        if (n.match(/oil|vinegar|sauce/)) return '🫗';
+        if (n.match(/flour|rice|noodle|pasta|bread|tortilla/)) return '🌾';
+        if (n.match(/salt|pepper|spice|powder|masala|cumin|turmeric|paprika/)) return '🧂';
+        if (n.match(/sugar|honey|syrup|sweet/)) return '🍯';
+        if (n.match(/tomato|onion|garlic|ginger|carrot/)) return '🥕';
+        if (n.match(/herb|basil|cilantro|parsley|mint|oregano/)) return '🌿';
+        if (n.match(/lemon|lime|juice/)) return '🍋';
+        if (n.match(/bean|lentil|pea|chickpea/)) return '🫘';
+        if (n.match(/egg/)) return '🥚';
+        return '🥘';
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === '/' && document.activeElement !== inp) {
+            e.preventDefault();
+            inp.focus();
+        }
+        if (e.key === 'Escape' && sheetOpen) closeSheet();
+    });
+
+    (function() {
+        var startY = 0, currentY = 0, dragging = false;
+        selSheet.addEventListener('touchstart', function(e) {
+            if (selSheetList.scrollTop > 0) return;
+            startY = e.touches[0].clientY;
+            dragging = true;
+            selSheet.style.transition = 'none';
+        });
+        selSheet.addEventListener('touchmove', function(e) {
+            if (!dragging) return;
+            currentY = e.touches[0].clientY;
+            var diff = currentY - startY;
+            if (diff > 0) selSheet.style.transform = 'translateY(' + diff + 'px)';
+        });
+        selSheet.addEventListener('touchend', function() {
+            if (!dragging) return;
+            dragging = false;
+            selSheet.style.transition = '';
+            var diff = currentY - startY;
+            if (diff > 100) closeSheet();
+            else {
+                selSheet.style.transform = '';
+                if (sheetOpen) selSheet.classList.add('open');
+            }
+            startY = 0; currentY = 0;
+        });
+    })();
+
+    // Initial Render
+    buildCategoryBar();
+    ingredientsGrid.innerHTML = initialStateHTML;
+    mobileTrigger.style.display = 'none';
+    selOverlay.style.display = 'none';
+})();
+</script>
+{% endblock %}

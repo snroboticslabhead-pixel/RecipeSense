@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+{% block title %}RecipeSense — Every Ingredient Has a Story{% endblock %}
+{% block nav_title %}Home{% endblock %}
+
+{% block extra_head %}
+<style>
+.hero-cta-group {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    padding-top: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.hero-cta-group::-webkit-scrollbar { display: none; }
+.hero-cta-group { -ms-overflow-style: none; scrollbar-width: none; }
+
+.cuisine-scroll {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 16px;
+}
+@media (max-width: 640px) {
+    .cuisine-scroll {
+        gap: 14px;
+        padding-bottom: 12px;
+        margin: 0 -20px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+    .cuisine-scroll .cuisine-item {
+        width: 80px;
+        flex-shrink: 0;
+    }
+    .cuisine-scroll .cuisine-circle {
+        width: 64px;
+        height: 64px;
+        box-shadow: none !important;
+    }
+    .cuisine-scroll .cuisine-label {
+        font-size: 11px;
+    }
+}
+
+/* ── Mobile Action Button Styles ── */
+.mobile-action-btn {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    flex-shrink: 0;
+    border: none;
+    font-family: inherit;
+}
+.mobile-action-btn.notify-btn {
+    background: #F8F8F8;
+    border: 1.5px solid #E9E9EB;
+    color: #1c1c1c;
+}
+.mobile-action-btn.notify-btn:active {
+    transform: scale(0.92);
+    background: #FFF0E8;
+    color: #FF5200;
+}
+.mobile-action-btn.profile-btn {
+    background: #FF5200;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(255, 82, 0, 0.25);
+}
+.mobile-action-btn.profile-btn:active {
+    transform: scale(0.92);
+}
+.notify-badge-dot {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 8px;
+    height: 8px;
+    background: #FF5200;
+    border-radius: 50%;
+    border: 1.5px solid #fff;
+}
+
+.ar-promo-badge {
+    background: linear-gradient(135deg, #FFF0E8 0%, #FFF8F4 100%);
+    border: 1px solid #FFD4B8;
+    border-radius: 20px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: none !important;
+}
+.btn-scan-sm {
+    background: #FF5200;
+    color: #ffffff;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: none !important;
+}
+.btn-add-sm {
+    background: #ffffff;
+    color: #1c1c1c;
+    border: 1.5px solid #1c1c1c;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pop-ing-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 8px 0 16px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+.pop-ing-scroll::-webkit-scrollbar { display: none; }
+.pop-ing-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+.pop-ing-card {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    text-decoration: none;
+}
+.pop-ing-card:hover { transform: translateY(-4px); }
+.pop-ing-card:active { transform: scale(0.95); }
+
+.pop-ing-img {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #E9E9EB;
+    transition: border-color 0.2s ease;
+    background: #F8F8F8;
+}
+.pop-ing-card:hover .pop-ing-img { border-color: #FF5200; }
+.pop-ing-img img { width: 100%; height: 100%; object-fit: cover; }
+.pop-ing-img .emoji-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+}
+
+.pop-ing-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1c1c1c;
+    text-align: center;
+    white-space: nowrap;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pop-ing-count {
+    font-size: 10px;
+    color: #93959f;
+    background: #F5F5F5;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.food-card {
+    box-shadow: none !important;
+}
+.food-card:hover {
+    box-shadow: none !important;
+    transform: translateY(-3px);
+    border-color: #ccc;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.95); }
+}
+.live-indicator {
+    animation: livePulse 2s ease-in-out infinite;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ═══════════════ MOBILE TOP HEADER ═══════════════ -->
+<div class="flex md:hidden items-center justify-between px-5 pt-6 pb-2 bg-white safe-t">
+    <div>
+        <h2 class="text-[22px] font-extrabold text-[#1c1c1c] tracking-tight">
+            Hello, {% if is_logged_in and current_user %}{{ current_user.username }}{% else %}Chef{% endif %}!
+        </h2>
+        <p class="text-[13px] text-[#686b78] font-medium mt-0.5">Ready to turn your ingredients into stories?</p>
+    </div>
+    
+    <!-- Dynamic Mobile Action Button -->
+    {% if is_logged_in %}
+        <button class="mobile-action-btn notify-btn" onclick="showToast('No new notifications', 'info')" aria-label="Notifications">
+            <i class="fa-solid fa-bell text-[18px]"></i>
+            <span class="notify-badge-dot"></span>
+        </button>
+    {% else %}
+        <a href="/login" class="mobile-action-btn profile-btn" aria-label="Login">
+            <i class="fa-solid fa-user text-[16px]"></i>
+        </a>
+    {% endif %}
+</div>
+
+<div class="block md:hidden px-5 py-2">
+    <div class="ar-promo-badge flex flex-col gap-3">
+        <div class="space-y-1">
+            <h3 class="text-[16px] font-black text-[#1c1c1c] tracking-tight">
+                AR Food Scanner
+            </h3>
+            <p class="text-[12px] text-[#686b78] leading-relaxed">
+                RecipeSense creates your next meal instantly by making sense of your kitchen pantry.
+            </p>
+        </div>
+        <div class="flex items-center gap-2 pt-0.5">
+            <a href="/scanner" class="btn-scan-sm no-underline">
+                <i class="fa-solid fa-camera text-[11px]"></i> Scan Now!
+            </a>
+            <a href="/ingredients" class="btn-add-sm no-underline">
+                <i class="fa-solid fa-plus text-[11px]"></i> Add Ingredient
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="block md:hidden px-5 py-2 mb-4">
+    <form action="/recipes" method="GET" class="relative w-full">
+        <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center pointer-events-none z-10">
+            <i class="fa-solid fa-magnifying-glass text-[#93959f] text-[14px]"></i>
+        </div>
+        <input type="text" name="search" placeholder="Search recipe name or ingredients..." class="w-full text-[14px] pl-11 pr-5 py-3.5 bg-white border-2 border-[#E9E9EB] rounded-full text-[#1c1c1c] outline-none focus:border-[#FF5200]">
+    </form>
+</div>
+
+<!-- ═══════════════ DESKTOP HERO SECTION ═══════════════ -->
+<section class="hidden md:block bg-white">
+    <div class="w-full px-5 md:px-8 lg:px-10 py-4 md:py-16">
+        <div class="max-w-[1200px] mx-auto">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div class="space-y-6">
+                    <div class="hidden md:inline-flex items-center gap-2">
+                        <span class="ai-badge" style="box-shadow: none !important;">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            AI Recipe Generator
+                        </span>
+                    </div>
+                    
+                    <h1 class="text-[34px] sm:text-[48px] md:text-[56px] font-extrabold text-[#1c1c1c] leading-[1.1] md:leading-[1.05] tracking-tight">
+                        Every Ingredient<br>
+                        <span class="text-[#FF5200]">Has a Story.</span>
+                    </h1>
+
+                    <div class="pt-2">
+                        <div class="pop-ing-scroll">
+                            {% for ing in popular_ingredients[:10] %}
+                            <a href="/ingredients" class="pop-ing-card">
+                                <div class="pop-ing-img">
+                                    {% if ing.image %}
+                                    <img src="{{ ing.image }}" alt="{{ ing.name }}" loading="lazy">
+                                    {% else %}
+                                    <div class="emoji-placeholder">{{ ing.emoji }}</div>
+                                    {% endif %}
+                                </div>
+                                <span class="pop-ing-name">{{ ing.name|title }}</span>
+                                <span class="pop-ing-count">{{ ing.count }} recipes</span>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="hero-cta-group">
+                        <a href="/ingredients" class="btn-p text-[15px] no-underline" style="flex-shrink: 0;">
+                            <i class="fa-solid fa-plus text-[13px]"></i> Add Ingredients
+                        </a>
+                        <a href="/scanner" class="btn-s text-[15px] no-underline" style="flex-shrink: 0;">
+                            <i class="fa-solid fa-camera text-[13px]"></i> Scan Kitchen
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="hidden lg:flex justify-end">
+                    <img src="https://i.ibb.co/YBTfynzs/image.png" alt="Cooking" class="w-full max-w-[500px] h-auto object-contain" loading="eager">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ CUISINES SECTION ═══════════════ -->
+<section class="bg-white">
+    <div class="w-full px-5 md:px-8 lg:px-10 py-6 md:py-10">
+        <div class="max-w-[1200px] mx-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="section-title">Explore Cuisines</h2>
+                <a href="/recipes" class="text-[13px] md:text-[14px] font-semibold text-[#FF5200] hover:text-[#cc4100] no-underline flex items-center gap-1">
+                    View all <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </a>
+            </div>
+            <div class="cuisine-scroll scroll-hide">
+                {% for c in cuisines %}
+                {% set cimg = c|cuisine_image %}
+                <a href="/recipes?cuisine={{ c }}" class="cuisine-item group flex flex-col items-center gap-3 shrink-0 w-[100px] no-underline">
+                    <div class="cuisine-circle w-[80px] h-[80px] rounded-full overflow-hidden bg-[#F8F8F8] transition-all">
+                        {% if cimg %}
+                        <img src="{{ cimg }}" alt="{{ c }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        {% else %}
+                        <div class="w-full h-full bg-[#F8F8F8] flex items-center justify-center text-2xl">🍽️</div>
+                        {% endif %}
+                    </div>
+                    <span class="cuisine-label text-[13px] font-semibold text-[#1c1c1c] group-hover:text-[#FF5200] transition-colors text-center">{{ c }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ POPULAR RIGHT NOW ═══════════════ -->
+<section class="bg-[#FAFAFA] border-t border-[#E9E9EB]">
+    <div class="w-full px-5 md:px-8 lg:px-10 py-10">
+        <div class="max-w-[1200px] mx-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="section-title">Popular Right Now</h2>
+                <a href="/recipes" class="text-[13px] md:text-[14px] font-semibold text-[#FF5200] hover:text-[#cc4100] no-underline flex items-center gap-1">
+                    View all <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </a>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+                {% for recipe in featured %}
+                {% set img = recipe|recipe_image %}
+                <a href="/recipes/{{ recipe.id }}" class="food-card no-underline group block bg-white">
+                    <div class="relative aspect-[4/3] bg-[#F8F8F8]">
+                        {% if img %}
+                        <img src="{{ img }}" alt="{{ recipe.name }}" class="w-full h-full object-cover">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100">
+                            <span class="text-4xl">{{ recipe.emoji }}</span>
+                        </div>
+                        {% endif %}
+                        <span class="absolute top-2 left-2 bg-white/95 backdrop-blur-sm text-[10px] font-bold text-[#1c1c1c] px-2.5 py-1 rounded-full border border-[#E9E9EB]">{{ recipe.cuisine }}</span>
+                    </div>
+                    <div class="p-3">
+                        <h3 class="text-[13px] md:text-[14px] font-bold text-[#1c1c1c] truncate mb-1">{{ recipe.name }}</h3>
+                        <div class="flex items-center gap-2 text-[11px] text-[#93959f] font-medium">
+                            <span><i class="fa-regular fa-clock mr-1"></i>{{ recipe.prep_time + recipe.cook_time }}m</span>
+                            <span>•</span>
+                            <span>{{ recipe.difficulty }}</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ QUICK PICKS ═══════════════ -->
+<section class="bg-white">
+    <div class="w-full px-5 md:px-8 lg:px-10 py-10">
+        <div class="max-w-[1200px] mx-auto">
+            <h2 class="section-title mb-6">Quick Picks</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                <a href="/recipes?difficulty=Easy" class="food-card no-underline group relative overflow-hidden aspect-[16/10]">
+                    <img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&h=400&fit=crop&q=80" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                    <div class="absolute bottom-3 left-3 md:bottom-4 md:left-4 text-white">
+                        <p class="text-[14px] md:text-[16px] font-bold">Easy Recipes</p>
+                        <p class="text-[11px] md:text-[12px] opacity-90">Under 15 min</p>
+                    </div>
+                </a>
+                <a href="/recipes?max_time=30" class="food-card no-underline group relative overflow-hidden aspect-[16/10]">
+                    <img src="https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=600&h=400&fit=crop&q=80" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                    <div class="absolute bottom-3 left-3 md:bottom-4 md:left-4 text-white">
+                        <p class="text-[14px] md:text-[16px] font-bold">Under 30 Min</p>
+                        <p class="text-[11px] md:text-[12px] opacity-90">Quick & Delicious</p>
+                    </div>
+                </a>
+                <a href="/recipes?tag=Healthy+%26+Light" class="food-card no-underline group relative overflow-hidden aspect-[16/10]">
+                    <img src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600&h=400&fit=crop&q=80" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                    <div class="absolute bottom-3 left-3 md:bottom-4 md:left-4 text-white">
+                        <p class="text-[14px] md:text-[16px] font-bold">Healthy</p>
+                        <p class="text-[11px] md:text-[12px] opacity-90">Low Calorie</p>
+                    </div>
+                </a>
+                <a href="/recipes?tag=Comfort+Food" class="food-card no-underline group relative overflow-hidden aspect-[16/10]">
+                    <img src="https://images.unsplash.com/photo-1504778703254-2cdc9a4b8a69?w=600&h=400&fit=crop&q=80" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                    <div class="absolute bottom-3 left-3 md:bottom-4 md:left-4 text-white">
+                        <p class="text-[14px] md:text-[16px] font-bold">Comfort Food</p>
+                        <p class="text-[11px] md:text-[12px] opacity-90">Rich & Indulgent</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ SHOWCASE SECTION ═══════════════ -->
+<section class="w-full bg-[#FAFAFA] md:py-16 py-0 border-t border-[#E9E9EB]">
+    <div class="w-full px-0 md:px-8 lg:px-10 max-w-[1200px] mx-auto">
+        <div class="grid md:grid-cols-2 grid-cols-1 items-center gap-8">
+            <div class="hidden md:flex flex-col gap-3 justify-center">
+                <h3 class="text-[26px] font-black text-[#1c1c1c] tracking-tight leading-tight">Elevate Your Culinary Senses</h3>
+                <p class="text-[14px] text-[#686b78] leading-relaxed max-w-md">Discover curated guides, master new kitchen techniques, and map out ingredient lookups smoothly. RecipeSense adapts directly around your workflow profile layout tools.</p>
+            </div>
+            <div class="flex md:justify-end justify-center w-full">
+                <img src="https://i.ibb.co/F4LVCHVN/image.png" alt="Showcase" class="w-full md:max-w-[420px] h-auto object-cover block">
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', function() {
+        const term = this.textContent.trim();
+        console.log('Searching for:', term);
+    });
+});
+</script>
+{% endblock %}

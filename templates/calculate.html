@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Interest Calculator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0a0f1a;
+            --bg2: #111827;
+            --card: #1a2235;
+            --card2: #1f2b40;
+            --border: #2a3a55;
+            --fg: #e8edf5;
+            --fg2: #9bb0cc;
+            --muted: #5a7194;
+            --accent: #00e68a;
+            --accent2: #00c978;
+            --accent-glow: rgba(0, 230, 138, 0.15);
+            --danger: #ff6b6b;
+            --warning: #ffc857;
+            --info: #4ecdc4;
+            --gold: #f0c040;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .bg-animation .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            animation: orbFloat 20s ease-in-out infinite;
+        }
+
+        .bg-animation .orb:nth-child(1) {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, #00e68a33, transparent);
+            top: -10%; left: -10%;
+            animation-delay: 0s;
+        }
+
+        .bg-animation .orb:nth-child(2) {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, #4ecdc433, transparent);
+            bottom: -10%; right: -10%;
+            animation-delay: -7s;
+        }
+
+        .bg-animation .orb:nth-child(3) {
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, #f0c04022, transparent);
+            top: 50%; left: 50%;
+            animation-delay: -14s;
+        }
+
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(80px, -60px) scale(1.1); }
+            50% { transform: translate(-40px, 80px) scale(0.9); }
+            75% { transform: translate(60px, 40px) scale(1.05); }
+        }
+
+        /* Grid Pattern Overlay */
+        .grid-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(0,230,138,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,230,138,0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .app-header {
+            text-align: center;
+            padding: 40px 20px 30px;
+            position: relative;
+        }
+
+        .app-header .logo-icon {
+            width: 70px; height: 70px;
+            background: linear-gradient(135deg, var(--accent), var(--info));
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: var(--bg);
+            margin-bottom: 20px;
+            box-shadow: 0 10px 40px rgba(0,230,138,0.3);
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 10px 40px rgba(0,230,138,0.3); }
+            50% { box-shadow: 0 10px 60px rgba(0,230,138,0.5); }
+        }
+
+        .app-header h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--fg), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+            margin-bottom: 8px;
+        }
+
+        .app-header p {
+            color: var(--muted);
+            font-size: 1.05rem;
+            font-weight: 400;
+        }
+
+        .date-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 8px 20px;
+            border-radius: 50px;
+            margin-top: 16px;
+            font-size: 0.9rem;
+            color: var(--accent);
+        }
+
+        .date-display i {
+            font-size: 0.85rem;
+        }
+
+        /* Summary Cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 30px rgba(0,230,138,0.1);
+        }
+
+        .summary-card .card-glow {
+            position: absolute;
+            top: -50%; right: -50%;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            opacity: 0.06;
+            pointer-events: none;
+        }
+
+        .summary-card:nth-child(1) .card-glow { background: var(--accent); }
+        .summary-card:nth-child(2) .card-glow { background: var(--warning); }
+        .summary-card:nth-child(3) .card-glow { background: var(--danger); }
+        .summary-card:nth-child(4) .card-glow { background: var(--info); }
+
+        .summary-card .card-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+        }
+
+        .summary-card:nth-child(1) .card-icon { background: rgba(0,230,138,0.15); color: var(--accent); }
+        .summary-card:nth-child(2) .card-icon { background: rgba(255,200,87,0.15); color: var(--warning); }
+        .summary-card:nth-child(3) .card-icon { background: rgba(255,107,107,0.15); color: var(--danger); }
+        .summary-card:nth-child(4) .card-icon { background: rgba(78,205,196,0.15); color: var(--info); }
+
+        .summary-card .card-label {
+            font-size: 0.82rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .summary-card .card-value {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--fg);
+        }
+
+        .summary-card .card-sub {
+            font-size: 0.8rem;
+            color: var(--fg2);
+            margin-top: 4px;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 16px 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 16px 10px 42px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--fg);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent);
+        }
+
+        .search-box input::placeholder {
+            color: var(--muted);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg2);
+            color: var(--fg);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: var(--bg);
+            border-color: transparent;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 4px 20px rgba(0,230,138,0.4);
+            transform: translateY(-1px);
+        }
+
+        /* Table Container */
+        .table-container {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+        }
+
+        thead {
+            background: var(--bg2);
+        }
+
+        thead th {
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid rgba(42,58,85,0.5);
+            transition: all 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(0,230,138,0.04);
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody td {
+            padding: 14px 16px;
+            font-size: 0.9rem;
+            color: var(--fg2);
+            vertical-align: middle;
+        }
+
+        .td-sno {
+            color: var(--muted);
+            font-weight: 500;
+            font-size: 0.82rem;
+        }
+
+        .td-name {
+            color: var(--fg);
+            font-weight: 600;
+            min-width: 180px;
+        }
+
+        .td-date {
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .td-principal {
+            color: var(--warning);
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .td-rate {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(0,230,138,0.1);
+            color: var(--accent);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .td-duration {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .duration-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--fg2);
+            white-space: nowrap;
+        }
+
+        .duration-badge .num {
+            color: var(--fg);
+            font-weight: 700;
+        }
+
+        .duration-badge.zero {
+            opacity: 0.3;
+        }
+
+        .td-interest {
+            color: var(--danger);
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .td-total {
+            color: var(--accent);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .td-words {
+            max-width: 280px;
+            min-width: 200px;
+            font-size: 0.82rem;
+            color: var(--fg2);
+            line-height: 1.4;
+            font-style: italic;
+        }
+
+        .td-words .rupees-highlight {
+            color: var(--accent);
+            font-weight: 600;
+            font-style: normal;
+        }
+
+        /* Expand Row */
+        .expand-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            width: 30px; height: 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            font-size: 0.75rem;
+        }
+
+        .expand-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        .expand-btn.active {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
+        }
+
+        .detail-row {
+            display: none;
+        }
+
+        .detail-row.show {
+            display: table-row;
+        }
+
+        .detail-row td {
+            padding: 0;
+            background: rgba(0,230,138,0.02);
+        }
+
+        .detail-content {
+            padding: 20px 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .detail-box {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .detail-box h4 {
+            font-size: 0.78rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-box h4 i {
+            color: var(--accent);
+        }
+
+        .detail-box .summary-text {
+            font-size: 0.92rem;
+            color: var(--fg);
+            line-height: 1.7;
+        }
+
+        .detail-box .summary-text .label {
+            color: var(--muted);
+        }
+
+        .detail-box .summary-text .value {
+            color: var(--fg);
+            font-weight: 600;
+        }
+
+        .detail-box .summary-text .value.green { color: var(--accent); }
+        .detail-box .summary-text .value.red { color: var(--danger); }
+        .detail-box .summary-text .value.yellow { color: var(--warning); }
+
+        .words-text {
+            font-size: 0.95rem;
+            color: var(--info);
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        /* Add Borrower Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            padding: 32px;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal h2 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal h2 i {
+            color: var(--accent);
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.82rem;
+            color: var(--muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--fg);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .modal-actions .btn {
+            flex: 1;
+            justify-content: center;
+            padding: 12px 20px;
+        }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--card2);
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: var(--fg);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            animation: toastIn 0.4s ease, toastOut 0.4s ease 2.6s forwards;
+            min-width: 280px;
+        }
+
+        .toast i {
+            color: var(--accent);
+            font-size: 1.1rem;
+        }
+
+        @keyframes toastIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes toastOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        /* Footer */
+        .app-footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--muted);
+            font-size: 0.82rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .app-footer .footer-brand {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        /* No Results */
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--muted);
+        }
+
+        .no-results i {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .no-results p {
+            font-size: 1rem;
+        }
+
+        /* Print Styles */
+        @media print {
+            .bg-animation, .grid-overlay, .toolbar, .expand-btn, .app-footer, .toast-container { display: none !important; }
+            body { background: #fff; color: #000; }
+            .summary-card { border: 1px solid #ddd; background: #f9f9f9; }
+            .table-container { border: 1px solid #ddd; }
+            thead th { background: #f0f0f0; color: #333; }
+            tbody td { color: #333; }
+            .td-principal { color: #b8860b; }
+            .td-interest { color: #cc0000; }
+            .td-total { color: #006600; }
+            .detail-row.show { display: table-row; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-header h1 { font-size: 1.8rem; }
+            .summary-cards { grid-template-columns: repeat(2, 1fr); }
+            .toolbar { flex-direction: column; }
+            .search-box { min-width: 100%; }
+            .form-row { grid-template-columns: 1fr; }
+            .detail-content { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            .summary-cards { grid-template-columns: 1fr; }
+            .app-container { padding: 12px; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg2); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+        /* Row Animation */
+        tbody tr {
+            animation: rowFadeIn 0.4s ease backwards;
+        }
+
+        @keyframes rowFadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="orb"></div>
+        <div class="orb"></div>
+        <div class="orb"></div>
+    </div>
+    <div class="grid-overlay"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Main App -->
+    <div class="app-container">
+
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-icon">
+                <i class="fas fa-calculator"></i>
+            </div>
+            <h1>Loan Interest Calculator</h1>
+            <p>Monthly interest calculation with Indian numbering format</p>
+            <div class="date-display">
+                <i class="fas fa-calendar-day"></i>
+                <span id="todayDate"></span>
+            </div>
+        </header>
+
+        <!-- Summary Cards -->
+        <section class="summary-cards" id="summaryCards">
+            <!-- Filled by JS -->
+        </section>
+
+        <!-- Toolbar -->
+        <section class="toolbar">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Search by borrower name...">
+            </div>
+            <button class="btn" onclick="printTable()">
+                <i class="fas fa-print"></i> Print
+            </button>
+            <button class="btn" onclick="exportCSV()">
+                <i class="fas fa-file-csv"></i> Export CSV
+            </button>
+            <button class="btn btn-primary" onclick="openModal()">
+                <i class="fas fa-plus"></i> Add Borrower
+            </button>
+        </section>
+
+        <!-- Table -->
+        <section class="table-container">
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px"></th>
+                            <th>S.No</th>
+                            <th>Borrower Name</th>
+                            <th>Loan Date</th>
+                            <th>Principal</th>
+                            <th>Rate</th>
+                            <th>Duration</th>
+                            <th>Interest</th>
+                            <th>Total Amount</th>
+                            <th>Amount in Words</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="no-results" id="noResults" style="display:none">
+                <i class="fas fa-search"></i>
+                <p>No borrowers found matching your search.</p>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Built with precision by <span class="footer-brand">Loan Interest Calculator</span> &mdash; Monthly interest at Indian rates</p>
+        </footer>
+    </div>
+
+    <!-- Add Borrower Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h2><i class="fas fa-user-plus"></i> Add New Borrower</h2>
+            <div class="form-group">
+                <label>Borrower Name</label>
+                <input type="text" id="inputName" placeholder="Enter full name">
+            </div>
+            <div class="form-group">
+                <label>Loan Date</label>
+                <input type="date" id="inputDate">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Principal Amount (₹)</label>
+                    <input type="number" id="inputPrincipal" placeholder="e.g. 100000" min="1">
+                </div>
+                <div class="form-group">
+                    <label>Monthly Interest Rate (%)</label>
+                    <input type="number" id="inputRate" placeholder="e.g. 2" min="0.1" step="0.1">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn btn-primary" onclick="addBorrower()">
+                    <i class="fas fa-check"></i> Add Borrower
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== DATA ==========
+        let borrowers = [
+            { name: "Kalali Sai Goud", date: "2025-12-24", principal: 100000, rate: 2 },
+            { name: "Peddagolla Yellaiah", date: "2025-01-01", principal: 100000, rate: 2 },
+            { name: "Lingapuram Sailu", date: "2024-07-10", principal: 40000, rate: 2 },
+            { name: "Raghavareddy", date: "2023-02-22", principal: 100000, rate: 2.5 },
+            { name: "Bardipuram Mallaiah", date: "2024-07-08", principal: 12000, rate: 2.5 },
+            { name: "Beeraiah Seripally", date: "2026-05-11", principal: 30000, rate: 2 },
+            { name: "Yellakurthi Kumaraiah", date: "2024-04-01", principal: 10000, rate: 2.5 },
+            { name: "Kumari Yadaiah", date: "2024-01-24", principal: 50000, rate: 2.5 },
+            { name: "Vadla Kistaiah", date: "2024-12-11", principal: 100000, rate: 2.5 },
+            { name: "Perolla Venkatram Reddy", date: "2020-07-19", principal: 20000, rate: 2.5 },
+            { name: "Bardipuram Bikshapathi", date: "2023-03-01", principal: 6000, rate: 3 },
+            { name: "Kalali Anja Goud", date: "2024-07-26", principal: 50000, rate: 2 },
+            { name: "Buddaipally Yadaiah", date: "2026-04-25", principal: 15000, rate: 3 }
+        ];
+
+        // ========== NUMBER TO WORDS (Indian Format) ==========
+        function numberToWords(num) {
+            if (num === 0) return "Zero Rupees Only";
+            if (num < 0) return "Minus " + numberToWords(Math.abs(num));
+
+            const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+                "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+                "Seventeen", "Eighteen", "Nineteen"];
+            const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+            num = Math.floor(num);
+
+            if (num < 20) return ones[num] + " Rupees Only";
+            if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 ? " " + ones[num % 10] : "") + " Rupees Only";
+            if (num < 1000) return ones[Math.floor(num / 100)] + " Hundred" + (num % 100 ? " and " + convertBelow100(num % 100) : "") + " Rupees Only";
+            if (num < 100000) return convertBelow1000(Math.floor(num / 1000)) + " Thousand" + (num % 1000 ? " " + convertBelow1000(num % 1000) : "") + " Rupees Only";
+            if (num < 10000000) return convertBelow100(Math.floor(num / 100000)) + " Lakh" + (num % 100000 ? " " + convertBelowLakh(num % 100000) : "") + " Rupees Only";
+            if (num < 1000000000) return convertBelow100(Math.floor(num / 10000000)) + " Crore" + (num % 10000000 ? " " + convertBelowCrore(num % 10000000) : "") + " Rupees Only";
+            return convertBelow1000(Math.floor(num / 1000000000)) + " Arab" + (num % 1000000000 ? " " + convertBelowCrore(num % 1000000000) : "") + " Rupees Only";
+        }
+
+        function convertBelow100(n) {
+            const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+                "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+                "Seventeen", "Eighteen", "Nineteen"];
+            const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+            if (n < 20) return ones[n];
+            return tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "");
+        }
+
+        function convertBelow1000(n) {
+            const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+            if (n < 100) return convertBelow100(n);
+            return ones[Math.floor(n / 100)] + " Hundred" + (n % 100 ? " and " + convertBelow100(n % 100) : "");
+        }
+
+        function convertBelowLakh(n) {
+            if (n < 1000) return convertBelow1000(n);
+            return convertBelow100(Math.floor(n / 1000)) + " Thousand" + (n % 1000 ? " " + convertBelow1000(n % 1000) : "");
+        }
+
+        function convertBelowCrore(n) {
+            if (n < 100000) return convertBelowLakh(n);
+            return convertBelow100(Math.floor(n / 100000)) + " Lakh" + (n % 100000 ? " " + convertBelowLakh(n % 100000) : "");
+        }
+
+        // ========== INDIAN CURRENCY FORMAT ==========
+        function formatCurrency(num) {
+            const parts = num.toString().split('.');
+            let intPart = parts[0];
+            const decPart = parts[1];
+
+            // Indian grouping: last 3 digits, then groups of 2
+            if (intPart.length > 3) {
+                const lastThree = intPart.slice(-3);
+                const rest = intPart.slice(0, -3);
+                const formatted = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+                intPart = formatted + ',' + lastThree;
+            }
+
+            return '₹' + intPart + (decPart ? '.' + decPart : '');
+        }
+
+        // ========== DATE CALCULATION ==========
+        function calcDuration(loanDateStr) {
+            const loanDate = new Date(loanDateStr);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            loanDate.setHours(0, 0, 0, 0);
+
+            if (loanDate > today) {
+                const diffMs = loanDate - today;
+                const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                return { years: 0, months: 0, days: 0, totalMonths: 0, isFuture: true, futureDays: diffDays };
+            }
+
+            let years = today.getFullYear() - loanDate.getFullYear();
+            let months = today.getMonth() - loanDate.getMonth();
+            let days = today.getDate() - loanDate.getDate();
+
+            if (days < 0) {
+                months--;
+                const prevMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+                days += prevMonth.getDate();
+            }
+
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+
+            const totalMonths = years * 12 + months + (days / 30);
+
+            return { years, months, days, totalMonths, isFuture: false, futureDays: 0 };
+        }
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr);
+            const day = String(d.getDate()).padStart(2, '0');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${day}-${months[d.getMonth()]}-${d.getFullYear()}`;
+        }
+
+        // ========== CALCULATE FOR BORROWER ==========
+        function calcBorrower(b) {
+            const dur = calcDuration(b.date);
+            const interest = dur.isFuture ? 0 : Math.round(b.principal * (b.rate / 100) * dur.totalMonths);
+            const total = b.principal + interest;
+            const words = numberToWords(total);
+
+            return {
+                ...b,
+                dur,
+                interest,
+                total,
+                words
+            };
+        }
+
+        // ========== RENDER SUMMARY CARDS ==========
+        function renderSummary(data) {
+            const totalPrincipal = data.reduce((s, b) => s + b.principal, 0);
+            const totalInterest = data.reduce((s, b) => s + b.interest, 0);
+            const totalAmount = data.reduce((s, b) => s + b.total, 0);
+            const activeLoans = data.filter(b => !b.dur.isFuture).length;
+
+            document.getElementById('summaryCards').innerHTML = `
+                <div class="summary-card">
+                    <div class="card-glow"></div>
+                    <div class="card-icon"><i class="fas fa-users"></i></div>
+                    <div class="card-label">Active Borrowers</div>
+                    <div class="card-value">${activeLoans}</div>
+                    <div class="card-sub">of ${data.length} total loans</div>
+                </div>
+                <div class="summary-card">
+                    <div class="card-glow"></div>
+                    <div class="card-icon"><i class="fas fa-coins"></i></div>
+                    <div class="card-label">Total Principal</div>
+                    <div class="card-value">${formatCurrency(totalPrincipal)}</div>
+                    <div class="card-sub">Sum of all loans</div>
+                </div>
+                <div class="summary-card">
+                    <div class="card-glow"></div>
+                    <div class="card-icon"><i class="fas fa-percent"></i></div>
+                    <div class="card-label">Total Interest</div>
+                    <div class="card-value">${formatCurrency(totalInterest)}</div>
+                    <div class="card-sub">Accumulated to date</div>
+                </div>
+                <div class="summary-card">
+                    <div class="card-glow"></div>
+                    <div class="card-icon"><i class="fas fa-wallet"></i></div>
+                    <div class="card-label">Total Payable</div>
+                    <div class="card-value">${formatCurrency(totalAmount)}</div>
+                    <div class="card-sub">Principal + Interest</div>
+                </div>
+            `;
+        }
+
+        // ========== RENDER TABLE ==========
+        function renderTable(filter = '') {
+            const tbody = document.getElementById('tableBody');
+            const noResults = document.getElementById('noResults');
+
+            const allData = borrowers.map(calcBorrower);
+            const filtered = filter
+                ? allData.filter(b => b.name.toLowerCase().includes(filter.toLowerCase()))
+                : allData;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                noResults.style.display = 'block';
+                renderSummary([]);
+                return;
+            }
+
+            noResults.style.display = 'none';
+            renderSummary(allData);
+
+            let html = '';
+            filtered.forEach((b, i) => {
+                const origIndex = borrowers.indexOf(borrowers.find(x => x.name === b.name && x.date === b.date));
+                const sno = origIndex + 1;
+
+                if (b.dur.isFuture) {
+                    html += `
+                        <tr style="animation-delay:${i * 0.04}s">
+                            <td><button class="expand-btn" onclick="toggleDetail(this, ${sno})"><i class="fas fa-chevron-down"></i></button></td>
+                            <td class="td-sno">${sno}</td>
+                            <td class="td-name">${b.name}</td>
+                            <td class="td-date">${formatDate(b.date)}</td>
+                            <td class="td-principal">${formatCurrency(b.principal)}</td>
+                            <td><span class="td-rate">${b.rate}%</span></td>
+                            <td><span style="color:var(--muted);font-size:0.85rem"><i class="fas fa-clock" style="margin-right:4px"></i>Starts in ${b.dur.futureDays} days</span></td>
+                            <td class="td-interest">${formatCurrency(0)}</td>
+                            <td class="td-total">${formatCurrency(b.principal)}</td>
+                            <td class="td-words"><span class="rupees-highlight">${numberToWords(b.principal)}</span></td>
+                        </tr>
+                        <tr class="detail-row" id="detail-${sno}">
+                            <td colspan="10">
+                                <div class="detail-content">
+                                    <div class="detail-box">
+                                        <h4><i class="fas fa-info-circle"></i> Loan Summary</h4>
+                                        <div class="summary-text">
+                                            <span class="label">Borrower:</span> <span class="value">${b.name}</span><br>
+                                            <span class="label">Loan Date:</span> <span class="value">${formatDate(b.date)}</span><br>
+                                            <span class="label">Principal:</span> <span class="value yellow">${formatCurrency(b.principal)}</span><br>
+                                            <span class="label">Rate:</span> <span class="value">${b.rate}% per month</span><br>
+                                            <span class="label">Status:</span> <span class="value" style="color:var(--warning)">Loan starts in ${b.dur.futureDays} days</span>
+                                        </div>
+                                    </div>
+                                    <div class="detail-box">
+                                        <h4><i class="fas fa-spell-check"></i> Amount in Words</h4>
+                                        <div class="words-text">${numberToWords(b.principal)}</div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    const durHTML = `
+                        <div class="td-duration">
+                            <span class="duration-badge ${b.dur.years === 0 ? 'zero' : ''}"><span class="num">${b.dur.years}</span> Y</span>
+                            <span class="duration-badge ${b.dur.months === 0 ? 'zero' : ''}"><span class="num">${b.dur.months}</span> M</span>
+                            <span class="duration-badge ${b.dur.days === 0 ? 'zero' : ''}"><span class="num">${b.dur.days}</span> D</span>
+                        </div>
+                    `;
+
+                    html += `
+                        <tr style="animation-delay:${i * 0.04}s">
+                            <td><button class="expand-btn" onclick="toggleDetail(this, ${sno})"><i class="fas fa-chevron-down"></i></button></td>
+                            <td class="td-sno">${sno}</td>
+                            <td class="td-name">${b.name}</td>
+                            <td class="td-date">${formatDate(b.date)}</td>
+                            <td class="td-principal">${formatCurrency(b.principal)}</td>
+                            <td><span class="td-rate">${b.rate}%</span></td>
+                            <td>${durHTML}</td>
+                            <td class="td-interest">${formatCurrency(b.interest)}</td>
+                            <td class="td-total">${formatCurrency(b.total)}</td>
+                            <td class="td-words"><span class="rupees-highlight">${b.words}</span></td>
+                        </tr>
+                        <tr class="detail-row" id="detail-${sno}">
+                            <td colspan="10">
+                                <div class="detail-content">
+                                    <div class="detail-box">
+                                        <h4><i class="fas fa-info-circle"></i> Loan Summary</h4>
+                                        <div class="summary-text">
+                                            <span class="label">Borrower:</span> <span class="value">${b.name}</span><br>
+                                            <span class="label">Loan Date:</span> <span class="value">${formatDate(b.date)}</span><br>
+                                            <span class="label">Duration:</span> <span class="value green">${b.dur.years} Years ${b.dur.months} Months ${b.dur.days} Days</span><br>
+                                            <span class="label">Total Months:</span> <span class="value">${b.dur.totalMonths.toFixed(2)}</span><br>
+                                            <span class="label">Principal:</span> <span class="value yellow">${formatCurrency(b.principal)}</span><br>
+                                            <span class="label">Interest (${b.rate}%/mo):</span> <span class="value red">${formatCurrency(b.interest)}</span><br>
+                                            <span class="label">Total Payable:</span> <span class="value green">${formatCurrency(b.total)}</span>
+                                        </div>
+                                    </div>
+                                    <div class="detail-box">
+                                        <h4><i class="fas fa-spell-check"></i> Amount in Words</h4>
+                                        <div class="words-text">${b.words}</div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // ========== TOGGLE DETAIL ROW ==========
+        function toggleDetail(btn, sno) {
+            const row = document.getElementById(`detail-${sno}`);
+            row.classList.toggle('show');
+            btn.classList.toggle('active');
+        }
+
+        // ========== SEARCH ==========
+        document.getElementById('searchInput').addEventListener('input', function () {
+            renderTable(this.value);
+        });
+
+        // ========== MODAL ==========
+        function openModal() {
+            document.getElementById('modalOverlay').classList.add('show');
+            document.getElementById('inputName').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('show');
+            document.getElementById('inputName').value = '';
+            document.getElementById('inputDate').value = '';
+            document.getElementById('inputPrincipal').value = '';
+            document.getElementById('inputRate').value = '';
+        }
+
+        // Close modal on overlay click
+        document.getElementById('modalOverlay').addEventListener('click', function (e) {
+            if (e.target === this) closeModal();
+        });
+
+        // ========== ADD BORROWER ==========
+        function addBorrower() {
+            const name = document.getElementById('inputName').value.trim();
+            const date = document.getElementById('inputDate').value;
+            const principal = parseFloat(document.getElementById('inputPrincipal').value);
+            const rate = parseFloat(document.getElementById('inputRate').value);
+
+            if (!name) { showToast('Please enter borrower name', 'warning'); return; }
+            if (!date) { showToast('Please select loan date', 'warning'); return; }
+            if (!principal || principal <= 0) { showToast('Please enter valid principal amount', 'warning'); return; }
+            if (!rate || rate <= 0) { showToast('Please enter valid interest rate', 'warning'); return; }
+
+            borrowers.push({ name, date, principal, rate });
+            closeModal();
+            renderTable(document.getElementById('searchInput').value);
+            showToast(`${name} added successfully!`, 'success');
+        }
+
+        // ========== TOAST ==========
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+            const color = type === 'success' ? 'var(--accent)' : 'var(--warning)';
+            toast.innerHTML = `<i class="fas ${icon}" style="color:${color}"></i> ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ========== EXPORT CSV ==========
+        function exportCSV() {
+            const data = borrowers.map(calcBorrower);
+            let csv = 'S.No,Borrower,Loan Date,Principal,Rate (%),Years,Months,Days,Interest,Total Amount,Amount in Words\n';
+
+            data.forEach((b, i) => {
+                const dur = b.dur;
+                csv += `${i + 1},"${b.name}","${b.date}",${b.principal},${b.rate},${dur.years},${dur.months},${dur.days},${b.interest},${b.total},"${b.words}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `loan_interest_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('CSV exported successfully!', 'success');
+        }
+
+        // ========== PRINT ==========
+        function printTable() {
+            // Expand all detail rows for printing
+            document.querySelectorAll('.detail-row').forEach(r => r.classList.add('show'));
+            window.print();
+        }
+
+        // ========== SET TODAY'S DATE ==========
+        function setTodayDate() {
+            const today = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('todayDate').textContent = today.toLocaleDateString('en-IN', options);
+        }
+
+        // ========== INIT ==========
+        setTodayDate();
+        renderTable();
+    </script>
+</body>
+</html>

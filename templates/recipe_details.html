@@ -1,0 +1,693 @@
+{% extends "base.html" %}
+{% block title %} {{ recipe.name }} — RecipeSense{% endblock %}
+{% block extra_head %}
+<style>
+:root{
+--brand:#EA580C; --brand-soft:#FFF7ED; --ink:#1c1c1c; --muted:#686b78;
+--line:#E9E9EB; --ok:#48c479; --warn:#d97706; --err:#e74c3c;
+}
+.glass{background:rgba(255,255,255,.7);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+.fade-in{animation:fadeIn .4s ease both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.step-card{transition:all .3s ease}
+.step-card.active{border-color:var(--brand);}
+.step-card.done{opacity:.55}
+.step-card.done .step-num{background:var(--ok)!important}
+
+/* Fullscreen cooking mode */
+#cookingMode{
+position:fixed;inset:0;z-index:100;background:#fff;
+display:none;flex-direction:column;
+animation:slideUp .4s cubic-bezier(.22,1,.36,1) both;
+}
+#cookingMode.open{display:flex}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:none}}
+.cm-header{padding:14px 20px;border-bottom:none!important;display:flex;align-items:center;gap:12px;background:#fff}
+.cm-body{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.cm-step{max-width:640px;width:100%;text-align:center;animation:stepIn .4s ease both}
+@keyframes stepIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+.cm-footer{padding:16px 20px;border-top:none!important;background:#fff}
+
+/* Listening indicator */
+.listening-wave{display:inline-flex;gap:3px;align-items:center;height:18px}
+.listening-wave span{width:3px;background:var(--brand);border-radius:2px;animation:wave 1s ease-in-out infinite}
+.listening-wave span:nth-child(1){animation-delay:0s;height:40%}
+.listening-wave span:nth-child(2){animation-delay:.15s;height:80%}
+.listening-wave span:nth-child(3){animation-delay:.3s;height:60%}
+.listening-wave span:nth-child(4){animation-delay:.45s;height:100%}
+.listening-wave span:nth-child(5){animation-delay:.6s;height:50%}
+@keyframes wave{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:600;border:1.5px solid var(--line);background:#fff}
+.pill-brand{background:var(--brand-soft);color:var(--brand);border-color:rgba(234,88,12,.2)}
+
+/* Solid Orange Selection State inside Circle */
+.fav-active {
+    background: var(--brand) !important;
+    border-color: var(--brand) !important;
+    color: #fff !important;
+}
+
+.btn{padding:10px 18px;border-radius:999px;font-weight:600;font-size:13px;cursor:pointer;border:2px solid var(--line);background:#fff;color:var(--ink);transition:all .2s;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--brand);color:#fff;border-color:var(--brand);}
+.btn-ghost{background:transparent}
+.btn-lg{padding:14px 24px;font-size:14px}
+.nutrition-card{text-align:center;padding:14px;background:#fff;border:2px solid var(--line);border-radius:18px;}
+.progress-bar{height:6px;background:var(--line);border-radius:999px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--brand),#f59e0b);transition:width .4s ease;border-radius:999px}
+
+.btn-circle{width:40px;height:40px;border-radius:50%!important;padding:0!important;justify-content:center;align-items:center;display:inline-flex}
+
+body.cooking-active nav, body.cooking-active footer, body.cooking-active .site-header{display:none!important}
+
+/* Responsive Action Overrides */
+@media (max-width: 767px) {
+    .desktop-actions-group { display: none !important; }
+    .mobile-back-text { display: none !important; }
+    .back-btn-m { padding: 10px 14px !important; border-radius: 50% !important; width: 40px; height: 40px; justify-content: center; }
+    
+    /* Force single line layout wrap behavior */
+    .lang-row-container { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important; width: 100% !important; gap: 8px !important; }
+    .lang-label-m { font-size: 15px !important; margin-bottom: 0 !important; white-space: nowrap; }
+    .lang-label-text-m { display: none !important; }
+    .controls-inner-wrap { display: flex !important; align-items: center !important; gap: 6px !important; }
+    .btn-mobile-opt { padding: 10px 11px !important; font-size: 12px !important; }
+    
+    /* Sticky Bottom CTA Bar */
+    .sticky-bottom-action {
+        position: fixed; bottom: 0; left: 0; right: 0; 
+        background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        padding: 12px 20px; border-top: 1px solid var(--line); z-index: 50;
+        display: block !important;
+    }
+    
+    /* Small screen optimizations for cooking bar options */
+    .cm-controls-bar { padding: 10px 14px !important; gap: 6px !important; }
+    .cm-controls-bar .btn, .cm-controls-bar select { padding: 8px 12px !important; font-size: 12px !important; white-space: nowrap !important; }
+}
+@media (min-width: 768px) {
+    .mobile-actions-group { display: none !important; }
+    .sticky-bottom-action { display: none !important; }
+}
+</style>
+{% endblock %}
+{% block content %}
+<div id="recipeView" class="bg-white min-h-screen pb-24 md:pb-8">
+<div class="w-full px-5 md:px-8 lg:px-10 py-6 md:py-8">
+<div class="max-w-[860px] mx-auto space-y-6 fade-in">
+
+<div class="flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3 flex-1 min-w-0">
+        <a href="javascript:history.back()" class="btn back-btn-m shrink-0"><i class="fa-solid fa-chevron-left text-[14px]"></i><span class="mobile-back-text">Back</span></a>
+        <span class="text-[16px] md:text-[18px] font-extrabold text-[#1c1c1c] truncate">{{ recipe.name }}</span>
+    </div>
+    <div class="flex items-center gap-2 desktop-actions-group shrink-0">
+        <button onclick="shareRecipe()" class="btn btn-circle" title="Share"><i class="fa-solid fa-share-nodes"></i></button>
+        <button onclick="window.print()" class="btn btn-circle" title="Print"><i class="fa-solid fa-print"></i></button>
+        <button id="favBtn" onclick="toggleFav({{ recipe.id or 0 }})"
+        class="btn btn-circle" title="Favorite">
+        <i class="fa-solid fa-heart"></i>
+        </button>
+    </div>
+</div>
+
+<div class="relative rounded-3xl overflow-hidden aspect-[16/10] md:aspect-[21/9] border-2 border-[#E9E9EB]">
+{% set img = recipe|recipe_image %}
+{% if img %}
+<img src="{{ img }}" alt="{{ recipe.name }}" class="w-full h-full object-cover">
+{% else %}
+<div class="w-full h-full flex items-center justify-center"
+style="background:linear-gradient(150deg,{{ recipe.color_from }},{{ recipe.color_to }})">
+<span class="text-7xl md:text-8xl">{{ recipe.emoji }}</span>
+</div>
+{% endif %}
+<div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10"></div>
+<div class="absolute bottom-4 left-4 md:bottom-6 md:left-6 text-white right-4">
+<div class="flex items-center gap-2 flex-wrap mb-2">
+{% if recipe.source == 'ai' %}
+<span class="pill pill-brand !bg-[#EA580C] !text-white !border-none"><i class="fa-solid fa-wand-magic-sparkles"></i>AI Generated</span>
+{% endif %}
+<span class="pill" style="background:rgba(255,255,255,.9);color:#1c1c1c;border:none">
+<i class="fa-solid fa-globe text-[#EA580C]"></i>{{ recipe.cuisine }}
+</span>
+<span class="pill" style="background:rgba(255,255,255,.9);color:#1c1c1c;border:none">
+<i class="fa-solid fa-signal text-[#EA580C]"></i>{{ recipe.difficulty }}
+</span>
+</div>
+<h1 class="text-[24px] md:text-[34px] font-extrabold tracking-tight leading-tight">{{ recipe.name }}</h1>
+</div>
+</div>
+
+<div class="grid grid-cols-4 gap-2">
+<div class="nutrition-card p-2.5 md:p-4">
+<div class="text-[16px] md:text-[17px] font-extrabold">{{ recipe.prep_time }}<span class="text-[10px] md:text-[11px] text-[#93959f] font-medium ml-0.5">m</span></div>
+<div class="text-[9px] text-[#93959f] font-bold uppercase mt-1">Prep</div>
+</div>
+<div class="nutrition-card p-2.5 md:p-4">
+<div class="text-[16px] md:text-[17px] font-extrabold">{{ recipe.cook_time }}<span class="text-[10px] md:text-[11px] text-[#93959f] font-medium ml-0.5">m</span></div>
+<div class="text-[9px] text-[#93959f] font-bold uppercase mt-1">Cook</div>
+</div>
+<div class="nutrition-card p-2.5 md:p-4">
+<div class="text-[16px] md:text-[17px] font-extrabold">{{ recipe.servings }}</div>
+<div class="text-[9px] text-[#93959f] font-bold uppercase mt-1">Servings</div>
+</div>
+<div class="nutrition-card p-2.5 md:p-4 !border-[#EA580C]/30 bg-[#FFF7ED]">
+<div class="text-[16px] md:text-[17px] font-extrabold text-[#EA580C]">{{ recipe.timeline.total }}<span class="text-[10px] md:text-[11px] font-medium ml-0.5">m</span></div>
+<div class="text-[9px] text-[#EA580C] font-bold uppercase mt-1">Total</div>
+</div>
+</div>
+
+{% if recipe.summary or recipe.description %}
+<div class="bg-[#F8F8F8] rounded-2xl p-4 md:p-5 border-2 border-[#E9E9EB]">
+<div class="flex items-center gap-2 mb-2">
+<i class="fa-solid fa-wand-magic-sparkles text-[#EA580C]"></i>
+<span class="text-[13px] font-bold tracking-wide text-[#686b78] uppercase">AI Summary</span>
+</div>
+<p class="text-[14px] text-[#1c1c1c] leading-relaxed font-medium" data-translate>
+{{ recipe.summary or recipe.description }}
+</p>
+</div>
+{% endif %}
+
+<div class="flex items-center justify-between flex-wrap gap-3 lang-row-container py-1 border-b border-[#E9E9EB] pb-3">
+<h2 class="text-[16px] md:text-[17px] font-bold flex items-center gap-2 lang-label-m">
+<i class="fa-solid fa-language text-[#EA580C]"></i><span class="lang-label-text-m">Language</span>
+</h2>
+<div class="flex items-center gap-2 controls-inner-wrap">
+<select id="langSelect" onchange="changeLang(this.value)" class="btn btn-mobile-opt" style="padding:8px 14px">
+<option value="en">🇺🇸 English</option>
+<option value="te">🇮🇳 Telugu</option>
+<option value="hi">🇮🇳 Hindi</option>
+<option value="ta">🇮🇳 Tamil</option>
+<option value="kn">🇮🇳 Kannada</option>
+<option value="ml">🇮🇳 Malayalam</option>
+<option value="bn">🇮🇳 Bengali</option>
+<option value="mr">🇮🇳 Marathi</option>
+<option value="gu">🇮🇳 Gujarati</option>
+<option value="pa">🇮🇳 Punjabi</option>
+<option value="ur">🇮🇳 Urdu</option>
+<option value="es">🇪🇸 Spanish</option>
+<option value="fr">🇫🇷 French</option>
+<option value="de">🇩🇪 German</option>
+<option value="it">🇮🇹 Italian</option>
+<option value="ja">🇯🇵 Japanese</option>
+<option value="ko">🇰🇷 Korean</option>
+<option value="zh">🇨🇳 Chinese</option>
+</select>
+<div class="flex items-center gap-1.5 mobile-actions-group">
+<button onclick="shareRecipe()" class="btn btn-mobile-opt btn-circle" title="Share"><i class="fa-solid fa-share-nodes"></i></button>
+<button onclick="window.print()" class="btn btn-mobile-opt btn-circle" title="Print"><i class="fa-solid fa-print"></i></button>
+<button id="favBtnMobile" onclick="toggleFav({{ recipe.id or 0 }})"
+class="btn btn-mobile-opt btn-circle" title="Favorite">
+<i class="fa-solid fa-heart"></i>
+</button>
+</div>
+</div>
+</div>
+
+<div>
+<h2 class="text-[16px] md:text-[17px] font-extrabold flex items-center gap-2 mb-4 text-[#1c1c1c]">
+<i class="fa-solid fa-carrot text-[#EA580C]"></i>
+Ingredients <span class="text-[12px] text-[#93959f] font-semibold">({{ recipe.ingredients|length }})</span>
+</h2>
+<div class="space-y-2">
+{% for ing in recipe.ingredients %}
+<div class="flex items-center gap-3 p-3.5 rounded-2xl border-2 {% if ing.available %}bg-white border-[#E9E9EB]{% else %}bg-[#fef9ed] border-[#d97706]/20{% endif %}">
+<div class="w-6 h-6 rounded-full border-2 border-[#d4d4d4] flex items-center justify-center shrink-0 cursor-pointer"
+onclick="this.classList.toggle('bg-[#48c479]');this.classList.toggle('border-[#48c479]');
+var i=this.querySelector('i');if(i)i.remove();else this.innerHTML='<i class=\'fa-solid fa-check text-white text-[8px]\'></i>';">
+</div>
+<span class="flex-1 text-[14px] font-semibold text-[#2c2c2c]" data-translate>{{ ing.name }}</span>
+<span class="text-[#EA580C] text-[12px] font-bold bg-[#FFF0E8] px-2.5 py-1 rounded-full" data-translate>{{ ing.amount }}</span>
+{% if not ing.available %}
+<span class="text-[10px] text-[#d97706] font-bold tracking-wide bg-amber-50 px-2 py-0.5 rounded">MISSING</span>
+{% endif %}
+</div>
+{% endfor %}
+</div>
+</div>
+
+<div>
+<h2 class="text-[16px] md:text-[17px] font-extrabold flex items-center gap-2 mb-4 text-[#1c1c1c]">
+<i class="fa-solid fa-chart-pie text-[#EA580C]"></i>Nutrition <span class="text-[12px] text-[#93959f] font-normal">per serving</span>
+</h2>
+<div class="grid grid-cols-4 md:grid-cols-7 gap-2">
+{% set n = recipe.nutrition %}
+<div class="nutrition-card"><div class="text-[16px] md:text-[17px] font-extrabold text-[#1c1c1c]">{{ n.calories }}</div><div class="text-[9px] text-[#93959f] font-bold uppercase mt-1">Cal</div></div>
+<div class="nutrition-card"><div class="text-[16px] md:text-[17px] font-extrabold text-[#2563eb]">{{ n.protein }}</div><div class="text-[9px] text-[#93959f] font-bold uppercase mt-1">Protein</div></div>
+<div class="nutrition-card"><div class="text-[16px] md:text-[17px] font-extrabold text-[#d97706]">{{ n.carbs }}</div><div class="text-[9px] text-[#93959f] font-bold uppercase mt-1">Carbs</div></div>
+<div class="nutrition-card"><div class="text-[16px] md:text-[17px] font-extrabold text-[#dc2626]">{{ n.fat }}</div><div class="text-[9px] text-[#93959f] font-bold uppercase mt-1">Fat</div></div>
+<div class="nutrition-card"><div class="text-[16px] md:text-[17px] font-extrabold text-[#48c479]">{{ n.fiber }}</div><div class="text-[9px] text-[#93959f] font-bold uppercase mt-1">Fiber</div></div>
+<div class="nutrition-card"><div class="text-[16px] md:text-[17px] font-extrabold text-[#ec4899]">{{ n.sugar }}</div><div class="text-[9px] text-[#93959f] font-bold uppercase mt-1">Sugar</div></div>
+<div class="nutrition-card"><div class="text-[16px] md:text-[17px] font-extrabold text-[#0891b2]">{{ n.sodium }}</div><div class="text-[9px] text-[#93959f] font-bold uppercase mt-1">Sodium</div></div>
+</div>
+</div>
+
+<div>
+<h2 class="text-[16px] md:text-[17px] font-extrabold flex items-center gap-2 mb-4 text-[#1c1c1c]">
+<i class="fa-solid fa-timeline text-[#EA580C]"></i>Timeline
+</h2>
+<div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+<div class="pill pill-brand"><i class="fa-solid fa-knife-kitchen"></i>Prep {{ recipe.timeline.prep }}m</div>
+<i class="fa-solid fa-arrow-right text-[#d4d4d4] text-[10px]"></i>
+<div class="pill pill-brand"><i class="fa-solid fa-fire-burner"></i>Cook {{ recipe.timeline.cook }}m</div>
+{% if recipe.timeline.rest %}
+<i class="fa-solid fa-arrow-right text-[#d4d4d4] text-[10px]"></i>
+<div class="pill pill-brand"><i class="fa-solid fa-mug-hot"></i>Rest {{ recipe.timeline.rest }}m</div>
+{% endif %}
+<i class="fa-solid fa-arrow-right text-[#d4d4d4] text-[10px]"></i>
+<div class="pill pill-ok"><i class="fa-solid fa-utensils"></i>Serve</div>
+</div>
+</div>
+
+<div>
+    <h2 class="text-[16px] md:text-[17px] font-extrabold flex items-center gap-2 mb-4 text-[#1c1c1c]">
+        <i class="fa-solid fa-video text-[#EA580C]"></i>Video Tutorials
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <a href="https://www.youtube.com/results?search_query=how+to+cook+{{ recipe.name|urlencode }}" target="_blank" rel="noopener" class="flex items-center gap-4 p-4 bg-white border-2 border-[#E9E9EB] rounded-2xl no-underline group">
+            <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-500 text-xl shrink-0">
+                <i class="fa-brands fa-youtube"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-[14px] font-bold text-[#1c1c1c] group-hover:text-[#EA580C] transition-colors truncate">Watch on YouTube</p>
+                <p class="text-[12px] text-[#93959f] mt-0.5 truncate">Search for "{{ recipe.name }}" tutorials</p>
+            </div>
+            <i class="fa-solid fa-arrow-right text-[#93959f] group-hover:text-[#EA580C] transition-colors shrink-0"></i>
+        </a>
+        <a href="https://www.google.com/search?q={{ recipe.name|urlencode }}+recipe+video&tbm=vid" target="_blank" rel="noopener" class="flex items-center gap-4 p-4 bg-white border-2 border-[#E9E9EB] rounded-2xl no-underline group">
+            <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 text-xl shrink-0">
+                <i class="fa-solid fa-play-circle"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-[14px] font-bold text-[#1c1c1c] group-hover:text-[#EA580C] transition-colors truncate">Google Videos</p>
+                <p class="text-[12px] text-[#93959f] mt-0.5 truncate">Find more video guides</p>
+            </div>
+            <i class="fa-solid fa-arrow-right text-[#93959f] group-hover:text-[#EA580C] transition-colors shrink-0"></i>
+        </a>
+    </div>
+</div>
+
+<div>
+<div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+<h2 class="text-[16px] md:text-[17px] font-extrabold flex items-center gap-2 text-[#1c1c1c]">
+<i class="fa-solid fa-list-check text-[#EA580C]"></i>Instructions
+<span class="text-[12px] text-[#93959f] font-normal">({{ recipe.steps|length }} steps)</span>
+</h2>
+<button onclick="enterCookingMode()" class="btn btn-primary md:flex hidden">
+<i class="fa-solid fa-fire-burner"></i>Start Cooking Mode
+</button>
+</div>
+<ol class="space-y-3">
+{% for step in recipe.steps %}
+<li class="step-card flex gap-3.5 p-4 bg-white border-2 border-[#E9E9EB] rounded-2xl" data-step-index="{{ loop.index0 }}">
+<div class="step-num w-8 h-8 rounded-full bg-[#EA580C] text-white text-[12px] font-bold flex items-center justify-center shrink-0 mt-0.5">{{ loop.index }}</div>
+<div class="flex-1">
+<p class="text-[14px] text-[#1c1c1c] leading-relaxed font-semibold" data-translate>{{ step.instruction }}</p>
+<div class="flex items-center gap-3 mt-2 flex-wrap border-t border-gray-100 pt-2">
+{% if step.time_minutes %}<span class="text-[11px] text-[#93959f] font-medium"><i class="fa-regular fa-clock"></i> {{ step.time_minutes }}m</span>{% endif %}
+<button onclick="speakText(this.parentElement.parentElement.querySelector('[data-translate]').textContent)" class="btn btn-circle !w-7 !h-7 text-[11px]" title="Listen"><i class="fa-solid fa-volume-high"></i></button>
+<button onclick="startTimerForStep({{ loop.index0 }})" class="btn btn-circle !w-7 !h-7 text-[11px]" title="Timer"><i class="fa-solid fa-stopwatch"></i></button>
+</div>
+</div>
+</li>
+{% endfor %}
+</ol>
+</div>
+
+{% if related %}
+<div>
+<h2 class="text-[16px] md:text-[17px] font-extrabold flex items-center gap-2 mb-4 text-[#1c1c1c]">
+<i class="fa-solid fa-wand-magic-sparkles text-[#EA580C]"></i>You Might Also Like
+</h2>
+<div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+{% for r in related %}
+<a href="/recipes/{{ r.id or '' }}{% if r.source=='ai' %}/ai?recipe={{ r|tojson|urlencode }}{% endif %}" class="block no-underline group">
+<div class="relative aspect-[4/3] bg-[#F8F8F8] rounded-2xl overflow-hidden border-2 border-[#E9E9EB]">
+<div class="w-full h-full flex items-center justify-center" style="background:linear-gradient(150deg,{{ r.color_from }},{{ r.color_to }})">
+<span class="text-4xl">{{ r.emoji }}</span>
+</div>
+</div>
+<h4 class="text-[13px] font-bold mt-2 text-[#2c2c2c] group-hover:text-[#EA580C] transition-colors truncate">{{ r.name }}</h4>
+</a>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+</div>
+</div>
+</div>
+
+<div class="sticky-bottom-action hidden">
+    <button onclick="enterCookingMode()" class="btn btn-primary w-full btn-lg justify-center">
+        <i class="fa-solid fa-fire-burner"></i>Start Cooking Mode
+    </button>
+</div>
+
+<div id="cookingMode">
+<div class="cm-header">
+<button onclick="exitCookingMode()" class="btn btn-circle"><i class="fa-solid fa-xmark"></i></button>
+<div class="flex-1 min-w-0 text-center">
+<p class="text-[14px] font-bold truncate" id="cmTitle">{{ recipe.name }}</p>
+<p class="text-[11px] text-[#93959f] mt-0.5">Step <span id="cmCurrent">1</span> of {{ recipe.steps|length }}</p>
+</div>
+<button id="listenBtn" onclick="toggleListenMode()" class="btn btn-circle" title="Voice commands">
+<i class="fa-solid fa-microphone"></i>
+</button>
+</div>
+<div style="padding:0 20px;background:#fff;">
+<div class="progress-bar" style="margin:10px 0">
+<div id="cmProgress" class="progress-fill" style="width:0%"></div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-[#93959f] font-semibold pb-2">
+<span id="cmPercent">0% complete</span>
+<span id="cmEta"></span>
+</div>
+</div>
+<div class="cm-controls-bar" style="padding:10px 20px;background:#fff;border-bottom:none!important;display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;-ms-overflow-style:none;">
+<select id="cmLang" onchange="changeLang(this.value)" class="btn" style="padding:10px 16px;font-size:13px;flex-shrink:0;">
+<option value="en">🇺🇸 EN</option><option value="te">🇮🇳 Telugu</option>
+<option value="hi">🇮🇳 Hindi</option><option value="ta">🇮🇳 Tamil</option>
+<option value="es">🇪🇸 ES</option><option value="fr">🇫🇷 FR</option>
+<option value="de">🇩🇪 DE</option><option value="ja">🇯🇵 JA</option>
+<option value="zh">🇨🇳 ZH</option>
+</select>
+<button onclick="toggleTTS()" id="cmTTSBtn" class="btn" style="flex-shrink:0;"><i class="fa-solid fa-volume-high"></i><span id="cmTTSLabel">Listen</span></button>
+<button onclick="repeatStep()" class="btn" style="flex-shrink:0;"><i class="fa-solid fa-rotate-right"></i>Repeat</button>
+<button onclick="startTimerForStep(cmStep)" class="btn" style="flex-shrink:0;"><i class="fa-solid fa-stopwatch"></i>Timer</button>
+</div>
+<div id="listenIndicator" style="display:none;padding:8px;background:#FFF7ED;text-align:center;border-bottom:none!important;">
+<span class="listening-wave"><span></span><span></span><span></span><span></span><span></span></span>
+<span class="text-[12px] font-bold text-[#EA580C] ml-2">Listening for commands…</span>
+</div>
+<div class="cm-body">
+<div class="cm-step">
+<div class="text-7xl mb-6" id="cmEmoji">{{ recipe.emoji }}</div>
+<p class="text-[20px] md:text-[24px] font-bold leading-relaxed text-[#1c1c1c]" id="cmStepText"></p>
+<p class="text-[13px] text-[#93959f] mt-3 italic" id="cmOriginal" style="display:none"></p>
+</div>
+</div>
+<div class="cm-footer">
+<div class="flex items-center gap-3 max-w-xl mx-auto">
+<button onclick="prevStep()" id="cmPrevBtn" class="btn btn-lg flex-1" disabled style="opacity:.4">
+<i class="fa-solid fa-arrow-left"></i>Previous
+</button>
+<button onclick="nextStep()" id="cmNextBtn" class="btn btn-primary btn-lg flex-1">
+Next<i class="fa-solid fa-arrow-right"></i>
+</button>
+</div>
+<div id="cmDots" class="flex items-center justify-center gap-2 mt-4"></div>
+</div>
+</div>
+<div id="timerToast" style="display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:200;background:#1c1c1c;color:#fff;padding:14px 22px;border-radius:999px;font-weight:600;">
+<span id="timerToastText">Timer</span>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+// ═══════════════ Recipe data (injected from Jinja) ═══════════════
+const RECIPE = {{ recipe|tojson }};
+const STEPS = RECIPE.steps || [];
+let cmStep = 0;
+let cmLang = localStorage.getItem('rs_lang') || 'en';
+let isSpeaking = false, currentUtterance = null;
+let listenMode = false, recognition = null;
+let translationCache = {};
+let activeTimer = null;
+
+// ═══════════════ Language ═══════════════
+document.addEventListener('DOMContentLoaded', function(){
+const saved = localStorage.getItem('rs_lang');
+if(saved){
+document.getElementById('langSelect').value = saved;
+document.getElementById('cmLang').value = saved;
+cmLang = saved;
+if(saved !== 'en') translatePage(saved);
+}
+// Check initial Favorite/Saved state from localStorage
+initFavState();
+});
+
+function changeLang(code){
+cmLang = code;
+localStorage.setItem('rs_lang', code);
+document.getElementById('langSelect').value = code;
+document.getElementById('cmLang').value = code;
+translatePage(code);
+updateCookingStep();
+}
+async function translatePage(target){
+if(target === 'en'){
+document.querySelectorAll('[data-translate]').forEach(el=>{
+if(el.dataset.original) el.textContent = el.dataset.original;
+});
+return;
+}
+const els = Array.from(document.querySelectorAll('[data-translate]'));
+for(const el of els){
+if(!el.dataset.original) el.dataset.original = el.textContent;
+const text = el.dataset.original.trim();
+if(!text) continue;
+const key = target + '|' + text;
+if(translationCache[key]){ el.textContent = translationCache[key]; continue; }
+try{
+const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${target}`;
+const r = await fetch(url);
+const d = await r.json();
+const t = (d.responseData && d.responseData.translatedText) || text;
+translationCache[key] = t;
+el.textContent = t;
+}catch(e){}
+}
+}
+async function translateText(text, target){
+if(target === 'en') return text;
+const key = target + '|' + text;
+if(translationCache[key]) return translationCache[key];
+try{
+const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${target}`;
+const r = await fetch(url);
+const d = await r.json();
+const t = (d.responseData && d.responseData.translatedText) || text;
+translationCache[key] = t;
+return t;
+}catch(e){ return text; }
+}
+// ═══════════════ TTS ═══════════════
+const LANG_TTS = {en:'en-US',te:'te-IN',hi:'hi-IN',ta:'ta-IN',kn:'kn-IN',ml:'ml-IN',
+bn:'bn-IN',mr:'mr-IN',gu:'gu-IN',pa:'pa-IN',ur:'ur-PK',
+es:'es-ES',fr:'fr-FR',de:'de-DE',it:'it-IT',ja:'ja-JP',ko:'ko-KR',zh:'zh-CN'};
+function speakText(text){
+if(!('speechSynthesis' in window)) return;
+stopTTS();
+const u = new SpeechSynthesisUtterance(text);
+u.lang = LANG_TTS[cmLang] || 'en-US';
+u.rate = 0.95; u.pitch = 1;
+u.onstart = ()=>{isSpeaking=true; updateTTSUI();};
+u.onend = u.onerror = ()=>{isSpeaking=false; updateTTSUI();};
+currentUtterance = u;
+speechSynthesis.speak(u);
+}
+function stopTTS(){ if('speechSynthesis' in window) speechSynthesis.cancel(); isSpeaking=false; updateTTSUI(); }
+function toggleTTS(){
+if(isSpeaking){ stopTTS(); return; }
+const text = STEPS[cmStep] ? STEPS[cmStep].instruction : '';
+if(cmLang !== 'en'){
+translateText(text, cmLang).then(t=>speakText(t));
+} else {
+speakText(text);
+}
+}
+function updateTTSUI(){
+const btn = document.getElementById('cmTTSBtn');
+const lbl = document.getElementById('cmTTSLabel');
+if(!btn) return;
+if(isSpeaking){
+btn.className = 'btn btn-primary';
+lbl.textContent = 'Stop';
+} else {
+btn.className = 'btn';
+lbl.textContent = 'Listen';
+}
+}
+// ═══════════════ Voice commands (Listen Mode) ═══════════════
+function toggleListenMode(){
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if(!SR){ alert('Speech recognition not supported in this browser'); return; }
+if(listenMode){ stopListening(); return; }
+recognition = new SR();
+recognition.continuous = true;
+recognition.interimResults = false;
+recognition.lang = LANG_TTS[cmLang] || 'en-US';
+recognition.onresult = (e)=>{
+const cmd = e.results[e.results.length-1][0].transcript.toLowerCase().trim();
+handleVoiceCommand(cmd);
+};
+recognition.onerror = (e)=>{ if(e.error!=='no-speech') console.warn('SR error',e.error); };
+recognition.onend = ()=>{ if(listenMode) recognition.start(); }; // keep listening
+try{ recognition.start(); listenMode = true; }catch(e){}
+document.getElementById('listenIndicator').style.display = '';
+document.getElementById('listenBtn').classList.add('btn-primary');
+}
+function stopListening(){
+listenMode = false;
+if(recognition){ try{recognition.stop();}catch(e){} recognition=null; }
+document.getElementById('listenIndicator').style.display = 'none';
+document.getElementById('listenBtn').classList.remove('btn-primary');
+}
+function handleVoiceCommand(cmd){
+console.log('[voice]', cmd);
+if(/next|skip|forward/.test(cmd)) nextStep();
+else if(/prev|previous|back/.test(cmd)) prevStep();
+else if(/repeat|again/.test(cmd)) repeatStep();
+else if(/pause|stop|quiet/.test(cmd)) stopTTS();
+else if(/read|listen|speak|play/.test(cmd)) toggleTTS();
+else if(/exit|quit|close|stop cooking/.test(cmd)) exitCookingMode();
+else if(/translate.*telugu/.test(cmd)) changeLang('te');
+else if(/translate.*hindi/.test(cmd)) changeLang('hi');
+else if(/translate.*tamil/.test(cmd)) changeLang('ta');
+else if(/translate.*english/.test(cmd)) changeLang('en');
+else if(/translate.*spanish/.test(cmd)) changeLang('es');
+}
+// ═══════════════ Cooking Mode ═══════════════
+function enterCookingMode(){
+cmStep = parseInt(localStorage.getItem('rs_progress_'+RECIPE.id) || '0');
+document.getElementById('cookingMode').classList.add('open');
+document.body.classList.add('cooking-active');
+updateCookingStep();
+}
+function exitCookingMode(){
+stopTTS(); stopListening();
+document.getElementById('cookingMode').classList.remove('open');
+document.body.classList.remove('cooking-active');
+}
+function updateCookingStep(){
+if(!STEPS[cmStep]) return;
+const step = STEPS[cmStep];
+document.getElementById('cmCurrent').textContent = cmStep+1;
+document.getElementById('cmStepText').textContent = step.instruction;
+document.getElementById('cmOriginal').style.display = cmLang==='en' ? 'none' : '';
+if(cmLang !== 'en'){
+document.getElementById('cmOriginal').textContent = step.instruction;
+translateText(step.instruction, cmLang).then(t=>{
+document.getElementById('cmStepText').textContent = t;
+});
+}
+// Progress
+const pct = Math.round(((cmStep+1)/STEPS.length)*100);
+document.getElementById('cmProgress').style.width = pct+'%';
+document.getElementById('cmPercent').textContent = pct+'% complete';
+// Dots
+let dots = '';
+for(let i=0;i<STEPS.length;i++){
+const bg = i===cmStep ? '#EA580C' : i<cmStep ? '#FED7AA' : '#E9E9EB';
+const w = i===cmStep ? '24px' : '8px';
+dots += `<div style="height:8px;width:${w};background:${bg};border-radius:999px;transition:all .3s"></div>`;
+}
+document.getElementById('cmDots').innerHTML = dots;
+// Prev/Next state
+document.getElementById('cmPrevBtn').disabled = cmStep===0;
+document.getElementById('cmPrevBtn').style.opacity = cmStep===0 ? '.4' : '1';
+const nb = document.getElementById('cmNextBtn');
+if(cmStep === STEPS.length-1){ nb.innerHTML = '<i class="fa-solid fa-check"></i>Finish'; }
+else { nb.innerHTML = 'Next<i class="fa-solid fa-arrow-right"></i>'; }
+// Save progress
+localStorage.setItem('rs_progress_'+RECIPE.id, cmStep);
+// Auto-narrate
+stopTTS();
+setTimeout(()=>toggleTTS(), 300);
+}
+function nextStep(){
+if(cmStep < STEPS.length-1){ cmStep++; updateCookingStep(); }
+else { exitCookingMode(); showToast('🎉 All done! Enjoy your meal!'); }
+}
+function prevStep(){ if(cmStep>0){ cmStep--; updateCookingStep(); } }
+function repeatStep(){ updateCookingStep(); }
+// ═══════════════ Timer ═══════════════
+function startTimerForStep(idx){
+const step = STEPS[idx];
+const mins = step && step.time_minutes ? step.time_minutes : 5;
+if(activeTimer){ clearInterval(activeTimer); activeTimer=null; }
+let secs = mins*60;
+const toast = document.getElementById('timerToast');
+const text = document.getElementById('timerToastText');
+toast.style.display = '';
+function tick(){
+const m = Math.floor(secs/60), s = secs%60;
+text.textContent = `⏱ ${m}:${s} — ${step ? step.instruction.slice(0,40) : 'Timer'}`;
+if(secs<=0){
+clearInterval(activeTimer); activeTimer=null;
+text.textContent = '🔔 Timer done!';
+speakText('Timer finished');
+setTimeout(()=>{toast.style.display='none';},4000);
+return;
+}
+secs--;
+}
+tick();
+activeTimer = setInterval(tick, 1000);
+}
+// ═══════════════ Misc / Core Features ═══════════════
+function showToast(msg){
+const t = document.getElementById('timerToast');
+document.getElementById('timerToastText').textContent = msg;
+t.style.display = '';
+setTimeout(()=>{t.style.display='none';},3000);
+}
+
+function initFavState() {
+    const isSaved = localStorage.getItem('rs_fav_' + RECIPE.id) === 'true';
+    const b = document.getElementById('favBtn');
+    const bMobile = document.getElementById('favBtnMobile');
+    if (isSaved) {
+        if(b) b.classList.add('fav-active');
+        if(bMobile) bMobile.classList.add('fav-active');
+    }
+}
+
+async function toggleFav(id){
+    if(!id){ showToast('Favorites require a saved recipe'); return; }
+    const b = document.getElementById('favBtn');
+    const bMobile = document.getElementById('favBtnMobile');
+    
+    const currentlySaved = b ? b.classList.contains('fav-active') : bMobile.classList.contains('fav-active');
+    
+    if (currentlySaved) {
+        if(b) b.classList.remove('fav-active');
+        if(bMobile) bMobile.classList.remove('fav-active');
+        localStorage.setItem('rs_fav_' + id, 'false');
+        showToast('Removed from favorites');
+    } else {
+        if(b) b.classList.add('fav-active');
+        if(bMobile) bMobile.classList.add('fav-active');
+        localStorage.setItem('rs_fav_' + id, 'true');
+        showToast('Saved to favorites');
+    }
+    
+    try {
+        await fetch('/api/favorites/' + id, { method: 'POST' });
+    } catch(e) {}
+}
+
+function shareRecipe(){
+    if(navigator.share){
+        navigator.share({
+            title: RECIPE.name,
+            text: `Check out this recipe for ${RECIPE.name}!`,
+            url: location.href
+        }).catch(()=>{});
+    } else {
+        navigator.clipboard.writeText(location.href);
+        showToast('Link copied to clipboard!');
+    }
+}
+
+// Keyboard shortcuts in cooking mode
+document.addEventListener('keydown',(e)=>{
+if(!document.getElementById('cookingMode').classList.contains('open')) return;
+if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();nextStep();}
+else if(e.key==='ArrowLeft'){e.preventDefault();prevStep();}
+else if(e.key==='Escape'){exitCookingMode();}
+});
+</script>
+{% endblock %}

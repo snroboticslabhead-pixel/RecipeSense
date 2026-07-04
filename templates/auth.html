@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'login' %}Login{% else %}Register{% endif %} — RecipeSense{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center px-4 py-12 bg-[#FAFAFA]">
+    <div class="w-full max-w-sm">
+        <div class="text-center mb-8">
+            <!-- Logo Image -->
+            <div class="mb-4">
+                <img src="https://i.ibb.co/8DGHZKXt/Chat-GPT-Image-Jun-25-2026-04-14-58-PM-1.png" 
+                     alt="RecipeSense Logo" 
+                     class="w-16 h-16 object-contain mx-auto">
+            </div>
+            <h1 class="text-2xl font-black text-[#1c1c1c] tracking-tight">
+                {% if mode == 'login' %}Welcome Back{% else %}Create Account{% endif %}
+            </h1>
+            <p class="text-[13px] text-[#686b78] mt-1.5 font-medium">
+                {% if mode == 'login' %}Log in to save your favorite recipes{% else %}Join RecipeSense today{% endif %}
+            </p>
+        </div>
+
+        <div class="space-y-5">
+            {% if error %}
+            <div class="p-3 bg-red-50 border border-red-100 text-red-600 text-[13px] font-semibold rounded-xl flex items-center gap-2">
+                <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{% if mode == 'login' %}/login{% else %}/register{% endif %}" class="space-y-4">
+                {% if mode == 'register' %}
+                <div>
+                    <label class="block text-[11px] font-extrabold text-[#686b78] uppercase tracking-wider mb-2">Full Name</label>
+                    <input type="text" name="username" required placeholder="John Doe" 
+                           class="w-full px-4 py-3 bg-[#F0F0F2] border border-transparent rounded-xl text-[14px] text-[#1c1c1c] placeholder-[#a0a3af] focus:bg-white focus:border-[#FF5200] focus:ring-2 focus:ring-[#FF5200]/10 focus:outline-none transition-all duration-200">
+                </div>
+                {% endif %}
+
+                <div>
+                    <label class="block text-[11px] font-extrabold text-[#686b78] uppercase tracking-wider mb-2">Email Address</label>
+                    <input type="email" name="email" required placeholder="you@example.com" 
+                           class="w-full px-4 py-3 bg-[#F0F0F2] border border-transparent rounded-xl text-[14px] text-[#1c1c1c] placeholder-[#a0a3af] focus:bg-white focus:border-[#FF5200] focus:ring-2 focus:ring-[#FF5200]/10 focus:outline-none transition-all duration-200">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-extrabold text-[#686b78] uppercase tracking-wider mb-2">Password</label>
+                    <input type="password" name="password" required placeholder="••••••••" 
+                           class="w-full px-4 py-3 bg-[#F0F0F2] border border-transparent rounded-xl text-[14px] text-[#1c1c1c] placeholder-[#a0a3af] focus:bg-white focus:border-[#FF5200] focus:ring-2 focus:ring-[#FF5200]/10 focus:outline-none transition-all duration-200">
+                </div>
+
+                <button type="submit" class="w-full py-3.5 bg-[#FF5200] hover:bg-[#E64A00] text-white font-bold text-[14px] rounded-xl transition-all duration-200 mt-2 focus:ring-4 focus:ring-[#FF5200]/20">
+                    {% if mode == 'login' %}Log In{% else %}Create Account{% endif %}
+                </button>
+            </form>
+
+            <div class="pt-2 text-center border-t border-[#E9E9EB]">
+                {% if mode == 'login' %}
+                <p class="text-[13px] text-[#686b78] font-medium">Don't have an account? 
+                    <a href="/register" class="text-[#FF5200] font-bold hover:underline ml-1">Sign up</a>
+                </p>
+                {% else %}
+                <p class="text-[13px] text-[#686b78] font-medium">Already have an account? 
+                    <a href="/login" class="text-[#FF5200] font-bold hover:underline ml-1">Log in</a>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

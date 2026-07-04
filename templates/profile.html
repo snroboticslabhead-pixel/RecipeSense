@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+{% block title %}Profile — RecipeSense{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Sleek, Low-Profile Range Slider ── */
+input[type="range"].time-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(to right, #FF5200 0%, #FF5200 var(--val, 50%), #E9E9EB var(--val, 50%), #E9E9EB 100%);
+    border-radius: 999px;
+    outline: none;
+    cursor: pointer;
+}
+input[type="range"].time-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    background: #fff;
+    border: 3px solid #FF5200;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    transition: transform 0.1s ease;
+}
+input[type="range"].time-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="w-full px-5 py-6 max-w-2xl mx-auto page-enter safe-t">
+    
+    <div class="flex items-center justify-between gap-4 border-b border-[#E9E9EB] pb-6 mb-6">
+        <div class="flex items-center gap-4 min-w-0">
+            <div class="w-14 h-14 rounded-full bg-[#FF5200] text-white flex items-center justify-center text-[20px] font-extrabold shrink-0 shadow-sm">
+                {{ user.username[0]|upper }}
+            </div>
+            <div class="min-w-0">
+                <h1 class="text-[22px] font-extrabold text-[#1c1c1c] tracking-tight truncate leading-tight">{{ user.username }}</h1>
+                <p class="text-[13px] text-[#686b78] font-medium truncate mt-1">{{ user.email }}</p>
+                <span class="text-[10px] text-[#93959f] font-bold tracking-wider uppercase block mt-1.5">Joined {{ user.created_at[:10] }}</span>
+            </div>
+        </div>
+        <a href="/logout" class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FEF2F2] text-[#dc2626] font-bold text-xs rounded-full border border-[#fecaca] hover:bg-[#fee2e2] transition-colors no-underline shrink-0">
+            <i class="fa-solid fa-right-from-bracket text-[11px]"></i> Logout
+        </a>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3 bg-[#F8F8F8] rounded-2xl p-4 mb-6 border border-[#E9E9EB]">
+        <div class="text-center border-r border-[#E9E9EB] last:border-0">
+            <span class="block text-[18px] font-black text-[#1c1c1c] leading-none">{{ fav_ids|length }}</span>
+            <span class="text-[10px] font-bold text-[#93959f] uppercase tracking-wide block mt-1.5">Saved</span>
+        </div>
+        <div class="text-center border-r border-[#E9E9EB] last:border-0">
+            <span class="block text-[18px] font-black text-[#1c1c1c] leading-none">{{ history_count }}</span>
+            <span class="text-[10px] font-bold text-[#93959f] uppercase tracking-wide block mt-1.5">Searches</span>
+        </div>
+        <div class="text-center">
+            <span class="block text-[18px] font-black text-[#1c1c1c] leading-none">{{ days_active }}</span>
+            <span class="text-[10px] font-bold text-[#93959f] uppercase tracking-wide block mt-1.5">Days Active</span>
+        </div>
+    </div>
+
+    <div class="space-y-6">
+        
+        <div>
+            <h3 class="text-[11px] font-extrabold text-[#93959f] uppercase tracking-wider mb-2.5 px-1">App Configurations</h3>
+            <div class="bg-white border border-[#E9E9EB] rounded-2xl divide-y divide-[#E9E9EB] overflow-hidden shadow-sm">
+                
+                <div class="flex items-center justify-between p-4 gap-4">
+                    <div>
+                        <p class="text-[14px] font-bold text-[#1c1c1c]">Measurement System</p>
+                        <p class="text-[12px] text-[#686b78] mt-0.5 leading-normal">Choose metric units (g/ml) or imperial sizes</p>
+                    </div>
+                    <div class="flex bg-[#F8F8F8] border border-[#E9E9EB] rounded-lg p-0.5 shrink-0">
+                        <button type="button" onclick="setUnit('metric')" id="unit-metric" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all {% if prefs.units == 'metric' %}bg-white text-[#FF5200] shadow-sm{% else %}text-[#686b78]{% endif %}">Metric</button>
+                        <button type="button" onclick="setUnit('imperial')" id="unit-imperial" class="px-3 py-1.5 rounded-md text-xs font-bold transition-all {% if prefs.units == 'imperial' %}bg-white text-[#FF5200] shadow-sm{% else %}text-[#686b78]{% endif %}">Imperial</button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-4 gap-4">
+                    <div>
+                        <p class="text-[14px] font-bold text-[#1c1c1c]">Default Portion Size</p>
+                        <p class="text-[12px] text-[#686b78] mt-0.5 leading-normal">Base serving amount loaded by templates</p>
+                    </div>
+                    <select id="defaultServings" class="px-3 py-1.5 border border-[#E9E9EB] rounded-lg text-xs font-bold text-[#1c1c1c] bg-white outline-none cursor-pointer focus:border-[#FF5200]">
+                        {% for i in [1, 2, 3, 4, 6, 8] %}
+                        <option value="{{ i }}" {% if prefs.default_servings == i %}selected{% endif %}>{{ i }} {% if i == 1 %}Person{% else %}People{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between p-4 gap-4">
+                    <div>
+                        <p class="text-[14px] font-bold text-[#1c1c1c]">App Alerts & Updates</p>
+                        <p class="text-[12px] text-[#686b78] mt-0.5 leading-normal">Toggle instant feature alerts logs</p>
+                    </div>
+                    <label class="relative inline-block w-10 h-6 shrink-0 cursor-pointer">
+                        <input type="checkbox" id="notifToggle" class="sr-only peer" {% if prefs.notifications %}checked{% endif %}>
+                        <span class="absolute inset-0 bg-[#E9E9EB] rounded-full transition-colors duration-150 peer-checked:bg-[#FF5200]"></span>
+                        <span class="absolute left-0.5 top-0.5 bg-white w-5 h-5 rounded-full transition-transform duration-150 shadow-sm peer-checked:transform peer-checked:translateX(16px)"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="flex justify-between items-center mb-2.5 px-1">
+                <h3 class="text-[11px] font-extrabold text-[#93959f] uppercase tracking-wider">Dietary Restrictions</h3>
+                <span class="text-[11px] font-bold text-[#FF5200]" id="dietCount">0 selected</span>
+            </div>
+            <div class="bg-white border border-[#E9E9EB] rounded-2xl p-4 shadow-sm">
+                <div class="flex flex-wrap gap-2" id="dietaryGrid">
+                    {% set opts=['Vegetarian','Vegan','Gluten-Free','Dairy-Free','Keto','Low-Calorie','High-Protein','None'] %}
+                    {% set cur=prefs.dietary|default('[]')|from_json %}
+                    {% for o in opts %}
+                    <button type="button" onclick="toggleDietary(this,'{{ o }}')" class="inline-flex items-center px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all duration-100 cursor-pointer text-[#686b78] bg-white border-[#E9E9EB] hover:border-[#FF5200] {% if o in cur %}!bg-[#FFF0E8] !text-[#FF5200] !border-[#FF5200] font-bold{% endif %}">
+                        {{ o }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="flex justify-between items-center mb-2.5 px-1">
+                <h3 class="text-[11px] font-extrabold text-[#93959f] uppercase tracking-wider">Favorite Cuisines</h3>
+                <span class="text-[11px] font-bold text-[#1c1c1c]" id="cuisineCount">0 selected</span>
+            </div>
+            <div class="bg-white border border-[#E9E9EB] rounded-2xl p-4 shadow-sm">
+                <div class="flex flex-wrap gap-2" id="cuisineGrid">
+                    {% set curc=prefs.cuisines|default('[]')|from_json %}
+                    {% for c in cuisines %}
+                    <button type="button" onclick="toggleCuisine(this,'{{ c }}')" class="inline-flex items-center px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all duration-100 cursor-pointer text-[#686b78] bg-white border-[#E9E9EB] hover:border-[#1c1c1c] {% if c in curc %}!bg-[#1c1c1c] !text-white !border-[#1c1c1c] font-bold{% endif %}">
+                        {{ c }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="flex justify-between items-center mb-2.5 px-1">
+                <h3 class="text-[11px] font-extrabold text-[#93959f] uppercase tracking-wider">Max Prep & Cook Time</h3>
+                <span id="timeValue" class="text-xs font-bold text-[#FF5200]">
+                    {{ prefs.max_cook_time|default(120) }} min
+                </span>
+            </div>
+            <div class="bg-white border border-[#E9E9EB] rounded-2xl p-4 shadow-sm">
+                <input type="range" id="maxTimeSlider" min="10" max="180" value="{{ prefs.max_cook_time|default(120) }}" step="5" class="time-slider">
+                <div class="flex justify-between text-[10px] text-[#93959f] mt-2.5 font-bold px-0.5">
+                    <span>10m</span><span>30m</span><span>1h</span><span>2h</span><span>3h</span>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" onclick="savePrefs()" id="saveBtn" class="w-full py-3.5 px-6 text-[14px] font-bold inline-flex items-center justify-center gap-2 bg-[#FF5200] text-white rounded-xl hover:bg-[#E64A00] transition-colors shadow-sm cursor-pointer">
+            <i class="fa-solid fa-check"></i>
+            <span id="saveBtnText">Update Preferences</span>
+        </button>
+
+        <div class="bg-white border border-[#E9E9EB] rounded-2xl p-4 shadow-sm mt-8">
+            <h3 class="text-[13px] font-extrabold text-[#dc2626] mb-1">Account & History Log Maintenance</h3>
+            <p class="text-[12px] text-[#93959f] font-medium mb-4 leading-normal">Manage search parameters history arrays or delete application metrics context data.</p>
+            
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <button type="button" onclick="openConfirmationModal('history')" class="inline-flex items-center justify-center gap-1.5 py-2.5 border border-[#E9E9EB] text-xs font-bold rounded-lg text-[#686b78] bg-white hover:bg-[#F8F8F8] transition-colors cursor-pointer">
+                    <i class="fa-solid fa-clock-rotate-left text-[11px]"></i> Clear History
+                </button>
+                <button type="button" onclick="openConfirmationModal('favorites')" class="inline-flex items-center justify-center gap-1.5 py-2.5 border border-[#fecaca] text-xs font-bold rounded-lg text-[#dc2626] bg-[#FEF2F2] hover:bg-[#fee2e2] transition-colors cursor-pointer">
+                    <i class="fa-solid fa-heart-crack text-[11px]"></i> Wipe Saved
+                </button>
+            </div>
+            <button type="button" onclick="openDeleteModal()" class="w-full py-2.5 border border-transparent text-xs font-extrabold rounded-lg text-white bg-red-600 hover:bg-red-700 transition-colors cursor-pointer text-center">
+                Permanently Terminate Account Entry
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="actionModal" class="fixed inset-0 bg-black/40 backdrop-blur-xs hidden items-center justify-center z-[1050] p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full border border-[#E9E9EB] text-center shadow-xl transform scale-95 transition-transform duration-150" id="actionModalBox">
+        <h3 class="text-[16px] font-extrabold text-[#1c1c1c] mb-1" id="actionModalTitle">Confirm Operation</h3>
+        <p class="text-[12px] text-[#686b78] leading-relaxed mb-4" id="actionModalDesc">This clear actions processing step is permanent.</p>
+        <div class="flex gap-2">
+            <button type="button" onclick="closeConfirmationModal()" class="flex-1 py-2 rounded-lg border border-[#E9E9EB] text-xs font-bold text-[#686b78] bg-white hover:bg-[#F8F8F8] cursor-pointer">Cancel</button>
+            <button type="button" id="actionModalConfirmBtn" class="flex-1 py-2 rounded-lg text-xs font-bold text-white bg-red-600 hover:bg-red-700 cursor-pointer">Clear Data</button>
+        </div>
+    </div>
+</div>
+
+<div id="deleteModal" class="fixed inset-0 bg-black/40 backdrop-blur-xs hidden items-center justify-center z-[1050] p-4">
+    <div class="bg-white rounded-2xl p-5 max-w-sm w-full border border-[#E9E9EB] text-center shadow-xl transform scale-95 transition-transform duration-150" id="deleteModalBox">
+        <h3 class="text-[16px] font-extrabold text-red-600 mb-1">Delete Account Forever?</h3>
+        <p class="text-[12px] text-[#686b78] leading-relaxed mb-3">Wipes profile preferences structures entirely. Type <b class="text-[#1c1c1c]">DELETE</b> to verify:</p>
+        <input type="text" id="confirmDeleteInput" placeholder="Type here" autocomplete="off" class="w-full px-3 py-2 border border-[#E9E9EB] rounded-lg text-sm text-center font-bold outline-none focus:border-red-600 mb-3.5">
+        <div class="flex gap-2">
+            <button type="button" onclick="closeDeleteModal()" class="flex-1 py-2 rounded-lg border border-[#E9E9EB] text-xs font-bold text-[#686b78] bg-white hover:bg-[#F8F8F8] cursor-pointer">Cancel</button>
+            <button type="button" id="confirmDeleteBtn" onclick="confirmDeleteAccount()" class="flex-1 py-2 rounded-lg text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:bg-red-300 disabled:cursor-not-allowed transition-colors" disabled>Confirm Delete</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    var sd = new Set({{ prefs.dietary|default('[]')|from_json|tojson }});
+    var sc = new Set({{ prefs.cuisines|default('[]')|from_json|tojson }});
+    var currentUnit = "{{ prefs.units|default('metric') }}";
+    var activeActionTarget = null;
+
+    function formatTime(v) {
+        v = parseInt(v);
+        if (v >= 60) { var h = Math.floor(v / 60); var m = v % 60; return h + 'h' + (m ? ' ' + m + 'm' : ''); }
+        return v + ' min';
+    }
+    
+    function updateSliderFill() {
+        var slider = document.getElementById('maxTimeSlider');
+        if(!slider) return;
+        var min = parseInt(slider.min) || 10; var max = parseInt(slider.max) || 180; var val = parseInt(slider.value) || 120;
+        var pct = ((val - min) / (max - min)) * 100;
+        slider.style.setProperty('--val', pct + '%');
+        document.getElementById('timeValue').textContent = formatTime(val);
+    }
+    
+    function updateCounts() {
+        document.getElementById('dietCount').textContent = sd.size + ' selected';
+        document.getElementById('cuisineCount').textContent = sc.size + ' selected';
+    }
+    
+    window.toggleDietary = function(btn, v) {
+        if (sd.has(v)) { 
+            sd.delete(v); 
+            btn.className = "inline-flex items-center px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all duration-100 cursor-pointer text-[#686b78] bg-white border-[#E9E9EB] hover:border-[#FF5200]";
+        } else { 
+            sd.add(v); 
+            btn.className = "inline-flex items-center px-3.5 py-1.5 text-xs font-bold rounded-full border transition-all duration-100 cursor-pointer text-[#FF5200] bg-[#FFF0E8] border-[#FF5200]";
+        }
+        updateCounts();
+    };
+    
+    window.toggleCuisine = function(btn, v) {
+        if (sc.has(v)) { 
+            sc.delete(v); 
+            btn.className = "inline-flex items-center px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all duration-100 cursor-pointer text-[#686b78] bg-white border-[#E9E9EB] hover:border-[#1c1c1c]";
+        } else { 
+            sc.add(v); 
+            btn.className = "inline-flex items-center px-3.5 py-1.5 text-xs font-bold rounded-full border transition-all duration-100 cursor-pointer text-white bg-[#1c1c1c] border-[#1c1c1c]";
+        }
+        updateCounts();
+    };
+    
+    window.setUnit = function(unit) {
+        currentUnit = unit;
+        var mBtn = document.getElementById('unit-metric');
+        var iBtn = document.getElementById('unit-imperial');
+        if(unit === 'metric') {
+            mBtn.className = "px-3 py-1.5 rounded-md text-xs font-bold transition-all bg-white text-[#FF5200] shadow-sm";
+            iBtn.className = "px-3 py-1.5 rounded-md text-xs font-bold transition-all text-[#686b78]";
+        } else {
+            mBtn.className = "px-3 py-1.5 rounded-md text-xs font-bold transition-all text-[#686b78]";
+            iBtn.className = "px-3 py-1.5 rounded-md text-xs font-bold transition-all bg-white text-[#FF5200] shadow-sm";
+        }
+    };
+
+    window.savePrefs = async function() {
+        var btn = document.getElementById('saveBtn'); var btnText = document.getElementById('saveBtnText');
+        btn.disabled = true; btnText.textContent = 'Updating...';
+        
+        var d = { 
+            dietary: JSON.stringify([...sd]), cuisines: JSON.stringify([...sc]), 
+            max_cook_time: parseInt(document.getElementById('maxTimeSlider').value),
+            units: currentUnit, default_servings: parseInt(document.getElementById('defaultServings').value),
+            notifications: document.getElementById('notifToggle').checked
+        };
+        try {
+            var r = await fetch('/api/preferences', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
+            if (r.ok) { 
+                btnText.innerHTML = '<i class="fa-solid fa-check"></i> Preferences Saved'; 
+                if(typeof showToast === 'function') showToast('Preferences updated'); 
+                setTimeout(() => { btnText.textContent = 'Update Preferences'; btn.disabled = false; }, 1500); 
+            } else { throw new Error('Failed'); }
+        } catch (e) { 
+            btnText.textContent = 'Update Preferences'; btn.disabled = false; 
+            if(typeof showToast === 'function') showToast('Save failed', 'error'); 
+        }
+    };
+
+    document.getElementById('maxTimeSlider').addEventListener('input', updateSliderFill);
+
+    // Modal Display Mechanics
+    var actModal = document.getElementById('actionModal');
+    var actModalBox = document.getElementById('actionModalBox');
+    var actConfirmBtn = document.getElementById('actionModalConfirmBtn');
+
+    window.openConfirmationModal = function(targetType) {
+        activeActionTarget = targetType;
+        var title = document.getElementById('actionModalTitle');
+        var desc = document.getElementById('actionModalDesc');
+        
+        if(targetType === 'history') {
+            title.textContent = "Clear Search History?";
+            desc.textContent = "Wipes out all local saved search strings metadata logs.";
+            actConfirmBtn.className = "flex-1 py-2 rounded-lg text-xs font-bold text-white bg-[#FF5200] hover:bg-orange-700 cursor-pointer";
+            actConfirmBtn.textContent = "Clear History";
+        } else if (targetType === 'favorites') {
+            title.textContent = "Wipe Favorites?";
+            desc.textContent = "Removes every bookmark recipe link tracking index entirely.";
+            actConfirmBtn.className = "flex-1 py-2 rounded-lg text-xs font-bold text-white bg-red-600 hover:bg-red-700 cursor-pointer";
+            actConfirmBtn.textContent = "Wipe All";
+        }
+        actModal.classList.remove('hidden'); actModal.classList.add('flex');
+        setTimeout(() => actModalBox.classList.remove('scale-95'), 10);
+    };
+
+    window.closeConfirmationModal = function() {
+        actModalBox.classList.add('scale-95');
+        setTimeout(() => { actModal.classList.add('hidden'); actModal.classList.remove('flex'); activeActionTarget = null; }, 100);
+    };
+
+    actConfirmBtn.addEventListener('click', async function() {
+        if(!activeActionTarget) return; closeConfirmationModal();
+        if(activeActionTarget === 'history') {
+            try { await fetch('/api/history', { method: 'DELETE' }); if(typeof showToast === 'function') showToast('History cleared', 'info'); setTimeout(() => location.reload(), 300); } 
+            catch(e) { if(typeof showToast === 'function') showToast('Clear failed', 'error'); }
+        } else if(activeActionTarget === 'favorites') {
+            try { await fetch('/api/favorites/all', { method: 'DELETE' }); if(typeof showToast === 'function') showToast('Collection wiped', 'info'); setTimeout(() => location.reload(), 300); } 
+            catch(e) { if(typeof showToast === 'function') showToast('Reset failed', 'error'); }
+        }
+    });
+
+    var delModal = document.getElementById('deleteModal');
+    var delModalBox = document.getElementById('deleteModalBox');
+    var delInput = document.getElementById('confirmDeleteInput');
+    var delBtn = document.getElementById('confirmDeleteBtn');
+
+    window.openDeleteModal = function() {
+        delModal.classList.remove('hidden'); delModal.classList.add('flex');
+        delInput.value = ''; delBtn.disabled = true;
+        setTimeout(() => { delModalBox.classList.remove('scale-95'); delInput.focus(); }, 50);
+    };
+    window.closeDeleteModal = function() {
+        delModalBox.classList.add('scale-95');
+        setTimeout(() => { delModal.classList.add('hidden'); delModal.classList.remove('flex'); }, 100);
+    };
+    delInput.addEventListener('input', function() { delBtn.disabled = this.value.trim().toUpperCase() !== 'DELETE'; });
+
+    window.confirmDeleteAccount = async function() {
+        if (delInput.value.trim().toUpperCase() !== 'DELETE') return;
+        delBtn.disabled = true; delBtn.textContent = 'Processing...';
+        try {
+            var r = await fetch('/api/account/delete', { method: 'POST' });
+            if (r.ok) { if(typeof showToast === 'function') showToast('Account removed', 'info'); setTimeout(() => { window.location.href = '/'; }, 1000); } 
+            else { throw new Error('Failed'); }
+        } catch (e) { closeDeleteModal(); if(typeof showToast === 'function') showToast('Failed to delete account', 'error'); delBtn.textContent = 'Confirm Delete'; delBtn.disabled = false; }
+    };
+
+    actModal.addEventListener('click', function(e) { if (e.target === actModal) closeConfirmationModal(); });
+    delModal.addEventListener('click', function(e) { if (e.target === delModal) closeDeleteModal(); });
+    
+    updateSliderFill(); updateCounts();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Recipes — RecipeSense{% endblock %}
+{% block nav_title %}Recipes{% endblock %}
+{% block content %}
+<div class="bg-white min-h-screen">
+    <div class="w-full px-5 md:px-8 lg:px-10 py-6 md:py-8">
+        <div class="max-w-[1200px] mx-auto space-y-5">
+            
+            <!-- Search Bar (Oval with CLEAR OUTER BORDER LINE) -->
+            <div class="max-w-2xl">
+                <div class="flex items-center gap-3 bg-white px-5 py-3.5 rounded-full transition-all duration-200" 
+                     style="border: 2.5px solid #E9E9EB;"
+                     onfocus="this.style.borderColor='#FF5200'; this.style.boxShadow='0 0 0 4px rgba(255, 82, 0, 0.08)';"
+                     onblur="this.style.borderColor='#E9E9EB'; this.style.boxShadow='none';">
+                    <i class="fa-solid fa-search text-[#93959f] text-[15px]"></i>
+                    <form class="flex-1 flex" action="/recipes" method="get">
+                        <input type="text" name="q" id="searchInput" value="{{ query }}" placeholder="Search recipes, ingredients..." 
+                               class="flex-1 bg-transparent outline-none text-[15px] placeholder:text-[#b8b8b8] p-0 border-none font-[inherit]">
+                    </form>
+                    {% if query or cuisine or difficulty or max_time or category_tag %}
+                    <a href="{% if search_ingredients %}/recipes?ingredients={{ search_ingredients|join(',') }}{% else %}/recipes{% endif %}" 
+                       class="w-8 h-8 flex items-center justify-center text-[#93959f] hover:text-[#FF5200] rounded-full hover:bg-[#FFF0E8] transition-colors no-underline">
+                        <i class="fa-solid fa-xmark text-[14px]"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if search_ingredients %}
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[12px] text-[#93959f] font-medium">Matching:</span>
+                {% for ing in search_ingredients %}
+                <span class="badge bg-[#FFF0E8] text-[#FF5200] border border-[#FF5200]/20"><i class="fa-solid fa-check text-[8px] text-[#48c479] mr-1"></i>{{ ing }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Filters (Oval Dropdowns) -->
+            <div class="flex items-center gap-3 overflow-x-auto pb-1 -mx-1 px-1 scroll-hide">
+                <select name="cuisine" id="filterCuisine" onchange="applyFilters()" class="bg-white text-[#686b78] text-[13px] font-medium px-5 py-2.5 outline-none cursor-pointer border-2 border-[#E9E9EB] hover:border-[#ccc] transition-colors focus:border-[#FF5200]">
+                    <option value="">All Cuisines</option>
+                    {% for c in cuisines %}<option value="{{ c }}" {% if cuisine==c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+                </select>
+                <select name="difficulty" id="filterDifficulty" onchange="applyFilters()" class="bg-white text-[#686b78] text-[13px] font-medium px-5 py-2.5 outline-none cursor-pointer border-2 border-[#E9E9EB] hover:border-[#ccc] transition-colors focus:border-[#FF5200]">
+                    <option value="">Any Difficulty</option>
+                    <option value="Easy" {% if difficulty=='Easy' %}selected{% endif %}>Easy</option>
+                    <option value="Medium" {% if difficulty=='Medium' %}selected{% endif %}>Medium</option>
+                    <option value="Hard" {% if difficulty=='Hard' %}selected{% endif %}>Hard</option>
+                </select>
+                <select name="max_time" id="filterTime" onchange="applyFilters()" class="bg-white text-[#686b78] text-[13px] font-medium px-5 py-2.5 outline-none cursor-pointer border-2 border-[#E9E9EB] hover:border-[#ccc] transition-colors focus:border-[#FF5200]">
+                    <option value="">Any Time</option>
+                    <option value="15" {% if max_time=='15' %}selected{% endif %}>Under 15m</option>
+                    <option value="30" {% if max_time=='30' %}selected{% endif %}>Under 30m</option>
+                    <option value="45" {% if max_time=='45' %}selected{% endif %}>Under 45m</option>
+                    <option value="60" {% if max_time=='60' %}selected{% endif %}>Under 1h</option>
+                </select>
+                <div class="ml-auto shrink-0">
+                    <span class="text-[13px] text-[#93959f] font-medium">
+                        {% if matched %}<span class="text-[#1c1c1c] font-bold">{{ matched|length }}</span> match{{ 'es' if matched|length!=1 else '' }}{% else %}<span class="text-[#1c1c1c] font-bold">{{ recipes|length }}</span> recipe{{ 's' if recipes|length!=1 else '' }}{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Recipe Grid -->
+            {% if matched or recipes %}
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {% if matched %}
+                    {% for item in matched %}{% set recipe=item.recipe %}{% set img=recipe|recipe_image %}
+                    <a href="/recipes/{{ recipe.id }}" class="food-card no-underline group block relative">
+                        <div class="absolute top-2 left-2 z-10 bg-[#48c479] text-white text-[10px] font-bold px-2.5 py-1 rounded-full">{{ item.match_percent }}%</div>
+                        <div class="relative aspect-[4/3] bg-[#F8F8F8] overflow-hidden">
+                            {% if img %}<img src="{{ img }}" alt="{{ recipe.name }}" class="w-full h-full object-cover">{% else %}<div class="w-full h-full flex items-center justify-center" style="background:linear-gradient(145deg,{{ recipe.color_from }},{{ recipe.color_to }});"><span class="text-4xl">{{ recipe.emoji }}</span></div>{% endif %}
+                            <span class="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-[10px] font-semibold text-[#1c1c1c] px-2.5 py-1 rounded-full border border-[#E9E9EB]">{{ recipe.cuisine }}</span>
+                        </div>
+                        <div class="p-3 space-y-2">
+                            <h3 class="text-[14px] font-bold text-[#1c1c1c] truncate group-hover:text-[#FF5200] transition-colors leading-tight">{{ recipe.name }}</h3>
+                            <div class="h-1.5 bg-[#F8F8F8] rounded-full overflow-hidden"><div class="h-full rounded-full {% if item.match_percent>=80 %}bg-[#48c479]{% elif item.match_percent>=50 %}bg-[#d97706]{% else %}bg-[#FF5200]{% endif %}" style="width:{{ item.match_percent }}%"></div></div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-[11px] text-[#93959f]"><i class="fa-regular fa-clock mr-0.5 text-[9px]"></i>{{ recipe.prep_time+recipe.cook_time }}m · {{ recipe.difficulty }}</span>
+                                {% if item.missing_ingredients|length>0 %}<span class="badge bg-[#fef9ed] text-[#d97706] border border-[#fde68a]">+{{ item.missing_ingredients|length }}</span>{% else %}<span class="badge bg-[#eafaf1] text-[#48c479] border border-[#bbf7d0]">Have all</span>{% endif %}
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    {% for recipe in recipes %}{% set img=recipe|recipe_image %}
+                    <a href="/recipes/{{ recipe.id }}" class="food-card no-underline group block relative">
+                        {% if recipe.id in fav_ids %}<button onclick="event.preventDefault();removeFavorite({{ recipe.id }},this)" class="absolute top-2 left-2 z-10 w-8 h-8 bg-white/95 rounded-full flex items-center justify-center text-red-500 border border-[#E9E9EB]"><i class="fa-solid fa-heart text-[12px]"></i></button>{% endif %}
+                        <div class="relative aspect-[4/3] bg-[#F8F8F8] overflow-hidden">
+                            {% if img %}<img src="{{ img }}" alt="{{ recipe.name }}" class="w-full h-full object-cover">{% else %}<div class="w-full h-full flex items-center justify-center" style="background:linear-gradient(145deg,{{ recipe.color_from }},{{ recipe.color_to }});"><span class="text-4xl">{{ recipe.emoji }}</span></div>{% endif %}
+                            <span class="absolute top-2 right-2 bg-white/90 backdrop-blur-sm text-[10px] font-semibold text-[#1c1c1c] px-2.5 py-1 rounded-full border border-[#E9E9EB]">{{ recipe.cuisine }}</span>
+                        </div>
+                        <div class="p-3">
+                            <h3 class="text-[14px] font-bold text-[#1c1c1c] truncate group-hover:text-[#FF5200] transition-colors leading-tight">{{ recipe.name }}</h3>
+                            <div class="flex items-center gap-2 text-[11px] text-[#93959f] mt-2">
+                                <span class="flex items-center gap-0.5"><i class="fa-regular fa-clock text-[9px]"></i>{{ recipe.prep_time+recipe.cook_time }}m</span>
+                                <span class="text-[#e9e9eb]">·</span>
+                                <span>{{ recipe.difficulty }}</span>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if (matched and matched|length==0) or (not matched and recipes|length==0) %}
+            <div class="text-center py-20 space-y-5">
+                <div class="w-20 h-20 bg-[#F8F8F8] rounded-full flex items-center justify-center mx-auto border border-[#E9E9EB]"><span class="text-4xl">🔍</span></div>
+                <div>
+                    <p class="text-[18px] font-bold text-[#1c1c1c]">No recipes found</p>
+                    <p class="text-[14px] text-[#686b78] mt-2 max-w-sm mx-auto">Try adjusting your search or adding more ingredients.</p>
+                </div>
+                <div class="flex gap-3 justify-center">
+                    <a href="/ingredients" class="btn-p text-[14px] no-underline"><i class="fa-solid fa-plus text-[11px]"></i>Add Ingredients</a>
+                    <a href="/recipes" class="btn-s text-[14px] no-underline"><i class="fa-solid fa-rotate text-[11px]"></i>Clear Filters</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function applyFilters(){
+    const p=new URLSearchParams();
+    {% if search_ingredients %}p.set('ingredients','{{ search_ingredients|join(",") }}');{% endif %}
+    {% if category_tag %}p.set('tag','{{ category_tag }}');{% endif %}
+    const q=document.getElementById('searchInput') ? document.getElementById('searchInput').value.trim() : '';
+    if(q)p.set('q',q);
+    const c=document.getElementById('filterCuisine').value;if(c)p.set('cuisine',c);
+    const d=document.getElementById('filterDifficulty').value;if(d)p.set('difficulty',d);
+    const t=document.getElementById('filterTime').value;if(t)p.set('max_time',t);
+    window.location.href='/recipes?'+p.toString();
+}
+</script>
+{% endblock %}

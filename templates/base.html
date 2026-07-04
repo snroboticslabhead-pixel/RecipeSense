@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>{% block title %}RecipeSense{% endblock %}</title>
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+@theme {
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --color-brand: #FF5200;
+    --color-brand-dark: #E64A00;
+    --color-brand-light: #FFF0E8;
+    --color-txt: #1c1c1c;
+    --color-txt2: #686b78;
+    --color-txt3: #93959f;
+    --color-surface: #ffffff;
+    --color-surface2: #F8F8F8;
+    --color-bdr: #E9E9EB;
+    --color-ok: #48c479;
+    --color-err: #e74c3c;
+}
+
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--color-surface); color: var(--color-txt); margin: 0; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+.scroll-hide::-webkit-scrollbar { display: none; }
+.scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+.page-enter { animation: fadeIn .2s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── SPLASH SCREEN ── */
+#splashScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    will-change: opacity, transform;
+}
+#splashScreen.hidden {
+    opacity: 0;
+    transform: scale(1.05);
+    pointer-events: none;
+}
+.splash-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    animation: splashPulse 1.2s ease-in-out infinite alternate;
+}
+.splash-title {
+    margin-top: 20px;
+    font-size: 28px;
+    font-weight: 800;
+    color: #1c1c1c;
+    letter-spacing: -0.5px;
+}
+.splash-title span {
+    color: #FF5200;
+}
+.splash-loader {
+    margin-top: 32px;
+    display: flex;
+    gap: 8px;
+}
+.splash-loader .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #FF5200;
+    animation: splashDotBounce 1.2s ease-in-out infinite;
+}
+.splash-loader .dot:nth-child(2) { animation-delay: 0.15s; }
+.splash-loader .dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes splashPulse {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    100% { transform: scale(1.05); opacity: 1; }
+}
+@keyframes splashDotBounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+    40% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Primary Button ── */
+.btn-p {
+    background: #ffffff; color: #1c1c1c; border: 2px solid #1c1c1c;
+    border-radius: 999px; font-weight: 600; cursor: pointer;
+    font-family: inherit; padding: 14px 32px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: none; transition: none;
+}
+.btn-p:hover { background: #f8f8f8; color: #1c1c1c; border-color: #1c1c1c; transform: none; box-shadow: none; }
+.btn-p:active { transform: none; }
+
+/* ── Secondary Button ── */
+.btn-s {
+    background: #fff; color: var(--color-txt); border: 2px solid var(--color-bdr);
+    border-radius: 999px; font-weight: 500; cursor: pointer;
+    font-family: inherit; padding: 14px 32px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: none;
+}
+.btn-s:hover { border-color: #ccc; background: #fff; transform: none; }
+.btn-s:active { transform: none; }
+
+.inp {
+    background: #fff; border: 2px solid var(--color-bdr); border-radius: 999px;
+    outline: none; transition: all .2s; font-family: inherit; padding: 14px 24px;
+}
+.inp:focus { border-color: var(--color-brand); box-shadow: 0 0 0 4px rgba(255, 82, 0, 0.08); }
+
+.chip {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500;
+    padding: 8px 16px; border-radius: 999px; background: #fff; color: var(--color-txt2);
+    cursor: pointer; transition: all .15s; font-family: inherit; white-space: nowrap; border: 2px solid var(--color-bdr);
+}
+.chip:hover { border-color: var(--color-brand); color: var(--color-brand); }
+.chip.active { background: var(--color-brand-light); color: var(--color-brand); border-color: var(--color-brand); }
+
+.food-card { border-radius: 16px; overflow: hidden; transition: transform .2s; cursor: pointer; background: #fff; border: 1px solid var(--color-bdr); }
+.food-card:hover { transform: translateY(-3px); border-color: #ccc; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.food-card img { transition: transform .4s ease; }
+.food-card:hover img { transform: scale(1.05); }
+
+.safe-b { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+.safe-t { padding-top: max(10px, env(safe-area-inset-top)); }
+.divider { height: 1px; background: var(--color-bdr); width: 100%; }
+.section-title { font-size: 22px; font-weight: 800; color: var(--color-txt); letter-spacing: -.02em; }
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 999px; letter-spacing: .01em; }
+
+select {
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2393959f' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 16px center; padding-right: 36px !important; border-radius: 999px;
+}
+
+/* ── Desktop Floating Chat FAB ── */
+@media (min-width: 768px) {
+    .chat-fab {
+        position: fixed;
+        z-index: 60;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #FF5200 0%, #FF7A33 100%);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        text-decoration: none;
+        box-shadow: 0 4px 20px rgba(255, 82, 0, 0.35);
+        transition: transform .2s ease, box-shadow .2s ease;
+        bottom: 28px;
+        right: 28px;
+    }
+    .chat-fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(255, 82, 0, 0.45); }
+    .chat-fab .fab-icon { font-size: 22px; line-height: 1; }
+    .mobile-side-dock { display: none !important; }
+}
+
+/* ── Mobile View Edge-Attached, Vertically Draggable Quick Dock Panel ── */
+@media (max-width: 767px) {
+    .chat-fab { display: none !important; }
+    
+    .mobile-side-dock {
+        position: fixed;
+        top: 65%;
+        right: 0;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        transform: translateX(116px);
+        transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        touch-action: none;
+        will-change: transform, top;
+    }
+    
+    .mobile-side-dock.active {
+        transform: translateX(0);
+    }
+    
+    /* Solid Brand Orange Minimalist Pull-Tab Trigger */
+    .dock-trigger {
+        width: 26px;
+        height: 48px;
+        background: #FF5200;
+        color: #ffffff;
+        border-radius: 10px 0 0 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        box-shadow: -2px 4px 12px rgba(255, 82, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-right: none;
+        cursor: grab;
+    }
+    .dock-trigger:active { cursor: grabbing; }
+    
+    .dock-drag-ridge {
+        width: 2px;
+        height: 10px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 99px;
+    }
+    
+    .dock-actions {
+        background: #ffffff;
+        border: 1px solid #E9E9EB;
+        border-right: none;
+        padding: 6px 12px;
+        border-radius: 16px 0 0 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: -4px 4px 18px rgba(0, 0, 0, 0.06);
+    }
+    
+    .dock-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        text-decoration: none;
+    }
+    
+    .dock-btn-chat {
+        background: #FF5200;
+        color: #ffffff;
+    }
+    
+    .dock-btn-fav {
+        background: #F8F8F8;
+        color: #1c1c1c;
+        border: 1px solid #E9E9EB;
+    }
+}
+
+body.chat-page .chat-fab,
+body.chat-page .mobile-side-dock { display: none !important; }
+body.chat-page main { padding-bottom: 0 !important; }
+body.chat-page .mobile-bottom-nav { display: none !important; }
+
+.ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #FF5200 0%, #FF7A33 100%);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(255, 82, 0, 0.3);
+}
+.ai-badge i { font-size: 12px; }
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body class="antialiased {% if request.path == '/chat' %}chat-page{% endif %}">
+
+<!-- ─── SPLASH SCREEN ─── -->
+<div id="splashScreen">
+    <img src="https://i.ibb.co/8DGHZKXt/Chat-GPT-Image-Jun-25-2026-04-14-58-PM-1.png" 
+         alt="RecipeSense" 
+         class="splash-logo">
+    <div class="splash-title">Recipe<span>Sense</span></div>
+    <div class="splash-loader">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+    </div>
+</div>
+
+<div id="toastContainer" class="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 items-center pointer-events-none"></div>
+
+{% include '_navbar.html' %}
+
+<main class="pt-[0px] md:pt-[70px] pb-[80px] md:pb-0 min-h-screen page-enter max-w-[1400px] mx-auto">
+    {% block content %}{% endblock %}
+</main>
+
+<a href="/chat" class="chat-fab" title="Ask AI Chef" aria-label="Open AI Chef Chat">
+    <i class="fa-solid fa-comment-dots fab-icon"></i>
+</a>
+
+<div id="mobileSideDock" class="mobile-side-dock">
+    <div class="dock-trigger" id="dockTrigger" title="Drag Up/Down or Swipe Open">
+        <div class="flex gap-[2px]">
+            <div class="dock-drag-ridge"></div>
+            <div class="dock-drag-ridge"></div>
+        </div>
+    </div>
+    <div class="dock-actions">
+        <a href="/favorites" class="dock-btn dock-btn-fav" title="View Saved Favorites" aria-label="Favorites">
+            <i class="fa-solid fa-heart"></i>
+        </a>
+        <a href="/chat" class="dock-btn dock-btn-chat" title="Ask AI Chef" aria-label="Open AI Chat">
+            <i class="fa-solid fa-comment-dots"></i>
+        </a>
+    </div>
+</div>
+
+<nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md z-50 md:hidden safe-b border-t border-[#E9E9EB]">
+    <div class="flex items-end justify-around h-[65px]">
+        <a href="/" class="flex-1 flex flex-col items-center justify-center gap-1 {% if request.path=='/' %}text-[#FF5200]{% else %}text-[#93959f]{% endif %} no-underline">
+            <i class="fa-solid fa-house text-[18px]"></i>
+            <span class="text-[10px] font-medium">Home</span>
+        </a>
+        <a href="/recipes" class="flex-1 flex flex-col items-center justify-center gap-1 {% if request.path=='/recipes' %}text-[#FF5200]{% else %}text-[#93959f]{% endif %} no-underline">
+            <i class="fa-solid fa-book-open text-[18px]"></i>
+            <span class="text-[10px] font-medium">Recipes</span>
+        </a>
+        <a href="/scanner" class="flex-1 flex flex-col items-center justify-center -mt-5 no-underline">
+            <div class="w-12 h-12 bg-[#FF5200] rounded-full flex items-center justify-center text-white border-4 border-white shadow-lg">
+                <i class="fa-solid fa-camera text-[16px]"></i>
+            </div>
+        </a>
+        <a href="/ingredients" class="flex-1 flex flex-col items-center justify-center gap-1 {% if request.path=='/ingredients' %}text-[#FF5200]{% else %}text-[#93959f]{% endif %} no-underline">
+            <i class="fa-solid fa-basket-shopping text-[18px]"></i>
+            <span class="text-[10px] font-medium">Pantry</span>
+        </a>
+        <a href="/profile" class="flex-1 flex flex-col items-center justify-center gap-1 {% if request.path=='/profile' %}text-[#FF5200]{% else %}text-[#93959f]{% endif %} no-underline">
+            <i class="fa-solid fa-circle-user text-[18px]"></i>
+            <span class="text-[10px] font-medium">Profile</span>
+        </a>
+    </div>
+</nav>
+
+<script>
+// ─── SPLASH SCREEN LOGIC (Only on first visit per session) ───
+(function() {
+    const splash = document.getElementById('splashScreen');
+    
+    // Check if splash has been shown in this session
+    const splashShown = sessionStorage.getItem('splashShown');
+    
+    function hideSplash() {
+        if (!splash) return;
+        splash.classList.add('hidden');
+        // Mark as shown in session storage
+        sessionStorage.setItem('splashShown', 'true');
+        setTimeout(() => {
+            splash.style.display = 'none';
+        }, 600);
+    }
+
+    // If splash was already shown in this session, hide it immediately
+    if (splashShown) {
+        splash.style.display = 'none';
+        return;
+    }
+
+    // Show splash for first visit only
+    // Hide after 2.5 seconds
+    const timer = setTimeout(hideSplash, 2500);
+
+    // Also hide on any user interaction (tap/click) as a fallback
+    const interactHandler = function() {
+        clearTimeout(timer);
+        hideSplash();
+        document.removeEventListener('click', interactHandler);
+        document.removeEventListener('touchstart', interactHandler);
+    };
+    document.addEventListener('click', interactHandler);
+    document.addEventListener('touchstart', interactHandler);
+})();
+
+function showToast(msg, type = 'success') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    const colors = { success: 'bg-[#1c1c1c]', error: 'bg-[#e74c3c]', info: 'bg-[#686b78]' };
+    const icons = { success: 'fa-check-circle', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+    t.className = `${colors[type]} text-white px-6 py-3 rounded-full text-[13px] font-medium pointer-events-auto flex items-center gap-3 border border-white/10 shadow-lg`;
+    t.innerHTML = `<i class="fa-solid ${icons[type]}"></i><span>${msg}</span>`;
+    c.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(10px)'; setTimeout(() => t.remove(), 300); }, 2500);
+}
+
+async function toggleFavorite(id, btn) {
+    try {
+        const r = await fetch(`/api/favorites/${id}`, { method: 'POST' });
+        if (r.ok) { btn.classList.add('text-red-500'); btn.classList.remove('text-gray-300'); showToast('Saved to favorites'); }
+    } catch(e) {}
+}
+
+async function removeFavorite(id, btn) {
+    try {
+        const r = await fetch(`/api/favorites/${id}`, { method: 'DELETE' });
+        if (r.ok) {
+            btn.classList.remove('text-red-500');
+            btn.classList.add('text-gray-300');
+            showToast('Removed from favorites');
+            const card = btn.closest('.food-card, .fav-card');
+            if (card) {
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => card.remove(), 300);
+            }
+        }
+    } catch(e) {}
+}
+
+// Drag dock logic handlers
+const dock = document.getElementById('mobileSideDock');
+const trigger = document.getElementById('dockTrigger');
+
+if (dock && trigger) {
+    let isDragging = false;
+    let startY = 0;
+    let startTop = 0;
+    let startX = 0;
+    let hasMovedVertically = false;
+
+    document.addEventListener('touchstart', (e) => {
+        if (!dock.contains(e.target)) {
+            dock.classList.remove('active');
+        }
+    }, { passive: true });
+
+    trigger.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        hasMovedVertically = false;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        const rect = dock.getBoundingClientRect();
+        startTop = rect.top;
+        dock.style.transition = 'none';
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const deltaY = currentY - startY;
+        const deltaX = startX - currentX;
+
+        if (Math.abs(deltaY) > 5) hasMovedVertically = true;
+
+        if (deltaX > 40 && !dock.classList.contains('active')) {
+            dock.classList.add('active');
+        } else if (deltaX < -40 && dock.classList.contains('active')) {
+            dock.classList.remove('active');
+        }
+
+        let newTop = startTop + deltaY;
+        const minTop = 20; 
+        const maxTop = window.innerHeight - 150; 
+        if (newTop < minTop) newTop = minTop;
+        if (newTop > maxTop) newTop = maxTop;
+        dock.style.top = `${newTop}px`;
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        dock.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), top 0.15s ease-out';
+        if (!hasMovedVertically) dock.classList.toggle('active');
+    });
+}
+</script>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

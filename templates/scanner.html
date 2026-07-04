@@ -1,0 +1,815 @@
+{% extends "base.html" %}
+{% block title %}Scan — RecipeSense{% endblock %}
+{% block nav_title %}Scan Ingredients{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Premium Scanner Styles ── */
+  .upload-btn, .cam-ctrl {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 22px; background: #fff; border: 2px solid #E9E9EB;
+    border-radius: 999px; color: #686b78; font-size: 13px; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: all 0.2s ease; white-space: nowrap;
+  }
+  .upload-btn:hover, .cam-ctrl:hover { border-color: #EA580C; color: #EA580C; background: #FFF7ED; }
+  .upload-btn:active, .cam-ctrl:active { transform: scale(0.96); }
+  .upload-btn.has-file { border-color: #48c479; color: #48c479; background: #eafaf1; }
+  input[type="file"].hidden-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  
+  .shutter {
+    width: 76px; height: 76px; border-radius: 999px; background: #fff;
+    border: 4px solid #EA580C; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s ease; padding: 0;
+  }
+  .shutter:hover { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(234,88,12,0.1); }
+  .shutter:active { transform: scale(0.92); }
+  .shutter-inner { width: 58px; height: 58px; border-radius: 999px; background: #EA580C; transition: all 0.15s ease; }
+  .shutter:hover .shutter-inner { background: #C2410C; }
+
+  .chef-card {
+    padding: 24px 16px; text-align: center; position: relative;
+    border-radius: 24px; border: 2px solid #E9E9EB; background: #fff;
+    cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); font-family: inherit;
+  }
+  .chef-card:hover { border-color: #EA580C; background: #FFF7ED; transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(234,88,12,0.1); }
+  .chef-card.selected { border-color: #EA580C; background: #FFF7ED; box-shadow: 0 0 0 4px rgba(234,88,12,0.15); }
+  .chef-check {
+    position: absolute; top: 12px; right: 12px; width: 24px; height: 24px;
+    background: #EA580C; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+    border: 3px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .scanned-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #FFF7ED; color: #EA580C; font-size: 13px; font-weight: 600;
+    padding: 8px 8px 8px 16px; border-radius: 999px; border: 2px solid rgba(234,88,12,0.2);
+    animation: chipIn 0.3s ease forwards;
+  }
+  @keyframes chipIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+  .scanned-chip button {
+    width: 22px; height: 22px; border-radius: 999px; background: #FFEDD5;
+    border: none; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.15s; color: #EA580C;
+  }
+  .scanned-chip button:hover { background: #FED7AA; }
+
+  .cat-btn {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; padding: 10px 20px; border-radius: 999px;
+    border: 2px solid #E9E9EB; background: #fff; color: #686b78;
+    cursor: pointer; transition: all 0.2s ease; font-family: inherit; white-space: nowrap;
+  }
+  .cat-btn:hover { border-color: #EA580C; color: #EA580C; }
+  .cat-btn.active { background: #EA580C; color: #fff; border-color: #EA580C; box-shadow: 0 4px 12px rgba(234,88,12,0.25); }
+
+  .scroll-hide::-webkit-scrollbar { display: none; }
+  .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .tip-card {
+    display: flex; align-items: flex-start; gap: 14px; padding: 20px;
+    background: #fff; border-radius: 20px; border: 2px solid #E9E9EB; transition: all 0.2s ease;
+  }
+  .tip-card:hover { border-color: #EA580C; transform: translateY(-2px); }
+  .tip-icon {
+    width: 44px; height: 44px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; border: 2px solid transparent;
+  }
+
+  @keyframes pulseRing {
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+  .pulse-ring {
+    position: absolute; inset: 0; border-radius: 999px; background: rgba(234,88,12,0.2);
+    animation: pulseRing 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  }
+
+  .retake-btn {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 20; display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 28px; background: rgba(0,0,0,0.7); backdrop-filter: blur(12px);
+    border: 2px solid rgba(255,255,255,0.3); border-radius: 999px;
+    color: #fff; font-size: 13px; font-weight: 600; font-family: inherit;
+    cursor: pointer; transition: all 0.2s ease; white-space: nowrap;
+  }
+  .retake-btn:hover { background: rgba(234,88,12,0.85); border-color: rgba(255,255,255,0.5); transform: translateX(-50%) scale(1.03); }
+  .retake-btn:active { transform: translateX(-50%) scale(0.97); }
+
+  @keyframes scanLine {
+    0% { top: 0%; }
+    50% { top: calc(100% - 3px); }
+    100% { top: 0%; }
+  }
+  .scan-line {
+    position: absolute; left: 5%; right: 5%; height: 3px; z-index: 15;
+    background: linear-gradient(90deg, transparent, #EA580C, transparent);
+    border-radius: 999px; box-shadow: 0 0 15px rgba(234,88,12,0.6);
+    animation: scanLine 2s ease-in-out infinite;
+    display: none;
+  }
+  .scan-line.active { display: block; }
+
+  /* Video lookup tag style adjustment */
+  .video-chip-link {
+    display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px;
+    background: #FF0000; color: #fff; font-size: 11px; font-weight: bold;
+    border-radius: 6px; text-decoration: none !important; transition: background 0.2s;
+  }
+  .video-chip-link:hover { background: #CC0000; color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white min-h-screen">
+  <div class="w-full px-5 md:px-8 lg:px-10 py-6 md:py-8">
+    <div class="max-w-[1200px] mx-auto">
+      
+      <div class="mb-8">
+        <h1 class="text-[26px] md:text-[32px] font-extrabold text-[#1c1c1c] tracking-tight">Scan Ingredients</h1>
+        <p class="text-[14px] text-[#686b78] mt-2 font-medium">Point your camera at fresh ingredients — AI will identify them and craft personalized recipes for you.</p>
+        
+        <!-- AI Models Indicator Badges -->
+        <div class="flex items-center gap-2 mt-3">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[11px] font-bold border border-blue-100">
+            <i class="fa-solid fa-eye"></i> Gemini Vision
+          </span>
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-[11px] font-bold border border-orange-100">
+            <i class="fa-solid fa-microchip"></i> Groq Recipes
+          </span>
+        </div>
+      </div>
+
+      <div id="cameraContainer" class="relative bg-[#0d0d0d] rounded-[32px] overflow-hidden mb-8 border-2 border-[#E9E9EB] shadow-sm" style="aspect-ratio:4/3; max-height:60vh;">
+        <video id="cameraFeed" autoplay playsinline muted class="w-full h-full object-cover" style="display:none;"></video>
+        <canvas id="captureCanvas" style="display:none;"></canvas>
+        
+        <div class="absolute inset-0 pointer-events-none" id="cornerGuides" style="display:none;">
+          <div class="absolute inset-6 border border-white/[.08] rounded-[24px]"></div>
+          <div class="absolute top-8 left-8 w-8 h-8 border-t-[3px] border-l-[3px] border-white/50 rounded-tl-2xl"></div>
+          <div class="absolute top-8 right-8 w-8 h-8 border-t-[3px] border-r-[3px] border-white/50 rounded-tr-2xl"></div>
+          <div class="absolute bottom-8 left-8 w-8 h-8 border-b-[3px] border-l-[3px] border-white/50 rounded-bl-2xl"></div>
+          <div class="absolute bottom-8 right-8 w-8 h-8 border-b-[3px] border-r-[3px] border-white/50 rounded-br-2xl"></div>
+        </div>
+
+        <div id="scanLine" class="scan-line"></div>
+
+        <div id="scanStatus" class="absolute top-6 left-1/2 -translate-x-1/2 text-white text-[13px] font-semibold px-6 py-3 rounded-full" style="z-index:30; display:none; backdrop-filter: blur(12px); background: rgba(0,0,0,0.6);">
+          <i class="fa-solid fa-spinner fa-spin mr-2"></i>
+          <span id="scanStatusText">Analyzing...</span>
+        </div>
+
+        <img id="capturedPreview" class="absolute inset-0 w-full h-full object-cover" style="z-index:10; display:none;" alt="Captured">
+
+        <button id="retakeBtn" class="retake-btn" style="display:none;" onclick="retakeImage()">
+          <i class="fa-solid fa-camera-rotate text-[13px]"></i>
+          <span>Retake / Upload New</span>
+        </button>
+
+        <div id="cameraLoading" class="absolute inset-0 flex flex-col items-center justify-center text-white/60">
+          <i class="fa-solid fa-camera text-4xl mb-4 animate-pulse"></i>
+          <p class="text-[14px] font-medium">Starting camera...</p>
+        </div>
+
+        <div id="noCamera" class="absolute inset-0 flex flex-col items-center justify-center text-white/50" style="display:none;">
+          <i class="fa-solid fa-camera-slash text-4xl mb-4"></i>
+          <p class="text-[15px] font-semibold text-white/70">Camera not available</p>
+          <p id="noCameraReason" class="text-[12px] mt-2 text-center px-8 max-w-xs">Please upload an image of your ingredients instead.</p>
+          <label class="upload-btn mt-6" for="uploadInput">
+            <i class="fa-solid fa-image text-[13px]"></i>Upload Image
+          </label>
+        </div>
+
+        <div id="httpWarning" class="absolute inset-0 flex flex-col items-center justify-center" style="display:none; background:rgba(0,0,0,.9);">
+          <i class="fa-solid fa-lock text-4xl mb-4 text-white/50"></i>
+          <p class="text-[15px] font-semibold text-white/80">Camera requires HTTPS</p>
+          <p class="text-[12px] mt-2 text-white/50 max-w-[280px] text-center">For security, cameras only work on HTTPS or localhost. Please upload an image below.</p>
+          <label class="upload-btn mt-6" for="uploadInput">
+            <i class="fa-solid fa-image text-[13px]"></i>Upload Image Instead
+          </label>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-center gap-8 mb-10">
+        <label class="upload-btn" for="uploadInput" id="uploadLabel" title="Upload image">
+          <i class="fa-solid fa-image text-[14px]"></i>
+          <span id="uploadText">Upload</span>
+        </label>
+        <input type="file" id="uploadInput" class="hidden-input" accept="image/*">
+        
+        <button id="captureBtn" onclick="captureImage()" class="shutter" title="Capture photo">
+          <div class="shutter-inner"></div>
+        </button>
+        
+        <button id="switchBtn" onclick="switchCamera()" class="cam-ctrl" title="Switch camera">
+          <i class="fa-solid fa-rotate text-[16px]"></i>
+        </button>
+      </div>
+
+      <div id="scannedSection" style="display:none;" class="mb-8 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-[18px] font-bold text-[#1c1c1c] flex items-center gap-2.5">
+            <div class="w-8 h-8 bg-[#eafaf1] rounded-full flex items-center justify-center border-2 border-[#48c479]/20">
+              <i class="fa-solid fa-circle-check text-[#48c479] text-[12px]"></i>
+            </div>
+            Detected Ingredients
+          </h3>
+          <button onclick="clearScanned()" class="text-[13px] text-[#93959f] hover:text-[#e74c3c] font-semibold transition-colors bg-transparent border-none cursor-pointer font-[inherit]">
+            <i class="fa-solid fa-trash-can mr-1 text-[10px]"></i>Clear all
+          </button>
+        </div>
+        <div id="scannedChips" class="flex flex-wrap gap-2.5"></div>
+        
+        <div class="flex items-center gap-3 mt-4">
+          <input type="text" id="manualAddInput" placeholder="Add more ingredients manually..." class="flex-1 px-6 py-3.5 text-[14px] placeholder:text-[#b8b8b8] bg-white border-2 border-[#E9E9EB] rounded-full focus:border-[#EA580C] focus:outline-none transition-colors font-medium">
+          <button onclick="addManualIngredient()" class="cam-ctrl" style="width:52px; height:52px; padding:0;" title="Add ingredient">
+            <i class="fa-solid fa-plus text-[14px]"></i>
+          </button>
+        </div>
+      </div>
+
+      <div id="chefSection" style="display:none;" class="mb-10 space-y-5">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h3 class="text-[18px] font-bold text-[#1c1c1c] flex items-center gap-2.5">
+            <div class="w-8 h-8 bg-[#FFF0E8] rounded-full flex items-center justify-center border-2 border-[#EA580C]/20">
+              <i class="fa-solid fa-hat-wizard text-[#EA580C] text-[12px]"></i>
+            </div>
+            Choose Your Chef Style
+          </h3>
+          <span class="text-[13px] text-[#93959f] font-medium">Pick a cooking approach</span>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <button onclick="selectChef('classic')" class="chef-card" data-chef="classic">
+            <div class="text-5xl mb-3">👨‍🍳</div>
+            <div class="text-[15px] font-bold text-[#1c1c1c]">Classic Chef</div>
+            <div class="text-[12px] text-[#93959f] mt-1.5 font-medium">Balanced recipes</div>
+            <div class="chef-check" style="display:none;"><i class="fa-solid fa-check text-white text-[10px]"></i></div>
+          </button>
+          <button onclick="selectChef('quick')" class="chef-card" data-chef="quick">
+            <div class="text-5xl mb-3">⚡</div>
+            <div class="text-[15px] font-bold text-[#1c1c1c]">Quick & Easy</div>
+            <div class="text-[12px] text-[#93959f] mt-1.5 font-medium">Under 20 minutes</div>
+            <div class="chef-check" style="display:none;"><i class="fa-solid fa-check text-white text-[10px]"></i></div>
+          </button>
+          <button onclick="selectChef('healthy')" class="chef-card" data-chef="healthy">
+            <div class="text-5xl mb-3">🥗</div>
+            <div class="text-[15px] font-bold text-[#1c1c1c]">Healthy Chef</div>
+            <div class="text-[12px] text-[#93959f] mt-1.5 font-medium">Low calorie focus</div>
+            <div class="chef-check" style="display:none;"><i class="fa-solid fa-check text-white text-[10px]"></i></div>
+          </button>
+          <button onclick="selectChef('comfort')" class="chef-card" data-chef="comfort">
+            <div class="text-5xl mb-3">🍳</div>
+            <div class="text-[15px] font-bold text-[#1c1c1c]">Comfort Chef</div>
+            <div class="text-[12px] text-[#93959f] mt-1.5 font-medium">Rich & indulgent</div>
+            <div class="chef-check" style="display:none;"><i class="fa-solid fa-check text-white text-[10px]"></i></div>
+          </button>
+        </div>
+      </div>
+
+      <div id="aiLoading" style="display:none;" class="mb-10">
+        <div class="p-12 text-center space-y-6 bg-gradient-to-br from-[#FFF7ED] to-white rounded-[32px] border-2 border-[#EA580C]/20 shadow-sm">
+          <div class="relative w-24 h-24 mx-auto">
+            <div class="pulse-ring"></div>
+            <div class="absolute inset-0 bg-[#EA580C] rounded-full flex items-center justify-center shadow-lg shadow-[#EA580C]/20">
+              <i class="fa-solid fa-hat-wizard text-white text-3xl"></i>
+            </div>
+          </div>
+          <div>
+            <p class="text-[18px] font-bold text-[#1c1c1c]" id="aiLoadingChef">Chef is cooking up ideas...</p>
+            <p id="aiLoadingText" class="text-[14px] text-[#686b78] font-medium mt-2">Analyzing your ingredients...</p>
+          </div>
+          <div class="flex justify-center gap-2 pt-2">
+            <div class="w-3 h-3 bg-[#EA580C] rounded-full animate-bounce" style="animation-delay:0s"></div>
+            <div class="w-3 h-3 bg-[#EA580C] rounded-full animate-bounce" style="animation-delay:.15s"></div>
+            <div class="w-3 h-3 bg-[#EA580C] rounded-full animate-bounce" style="animation-delay:.3s"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="categorySection" style="display:none;" class="space-y-6 pb-10">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h3 class="text-[20px] font-bold text-[#1c1c1c] flex items-center gap-2.5">
+              <div class="w-8 h-8 bg-[#FFF0E8] rounded-full flex items-center justify-center border-2 border-[#EA580C]/20">
+                <i class="fa-solid fa-utensils text-[#EA580C] text-[12px]"></i>
+              </div>
+              What You Can Make
+            </h3>
+            <p id="categorySubtitle" class="text-[13px] text-[#93959f] mt-1.5 font-medium ml-11"></p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="showChefSection()" class="text-[13px] text-[#686b78] hover:text-[#1c1c1c] font-semibold transition-colors bg-white border-2 border-[#E9E9EB] hover:border-[#EA580C] rounded-full px-5 py-2.5 cursor-pointer">
+              <i class="fa-solid fa-arrows-rotate mr-1.5 text-[10px]"></i>Change Chef
+            </button>
+            <button onclick="refetchAI()" class="text-[13px] text-[#EA580C] font-bold hover:text-[#C2410C] transition-colors bg-[#FFF7ED] border-2 border-[#EA580C]/20 rounded-full px-5 py-2.5 cursor-pointer">
+              <i class="fa-solid fa-rotate mr-1.5 text-[10px]"></i>Refresh
+            </button>
+          </div>
+        </div>
+
+        <div id="categoryStrip" class="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1 scroll-hide"></div>
+
+        <div id="categoryRecipes" class="mt-6"></div>
+      </div>
+
+      <div id="emptyState" style="display:none;" class="mb-10">
+        <div class="p-14 text-center space-y-5 bg-gradient-to-br from-[#f9f9f9] to-white rounded-[32px] border-2 border-[#E9E9EB]">
+          <div class="text-7xl">🤷</div>
+          <p class="text-[20px] font-bold text-[#1c1c1c]">No Recipes Found</p>
+          <p id="emptyText" class="text-[14px] text-[#686b78] max-w-sm mx-auto font-medium">Could not generate recipes. Try different ingredients or change your chef style.</p>
+          <div class="flex gap-3 justify-center pt-3 flex-wrap">
+            <button onclick="showChefSection()" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white border-2 border-[#E9E9EB] text-[#686b78] font-bold text-[13px] hover:border-[#EA580C] hover:text-[#EA580C] transition-all cursor-pointer">
+              <i class="fa-solid fa-hat-wizard text-[11px]"></i>Change Chef
+            </button>
+            <button onclick="refetchAI()" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#EA580C] text-white font-bold text-[13px] hover:bg-[#C2410C] transition-all cursor-pointer shadow-lg shadow-[#EA580C]/20">
+              <i class="fa-solid fa-rotate text-[11px]"></i>Try Again
+            </button>
+            <button onclick="clearScanned()" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white border-2 border-[#E9E9EB] text-[#686b78] font-bold text-[13px] hover:border-[#EA580C] hover:text-[#EA580C] transition-all cursor-pointer">
+              <i class="fa-solid fa-camera text-[11px]"></i>Rescan
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tipsSection" class="mt-10 space-y-5 pb-6">
+        <p class="text-[13px] font-bold text-[#93959f] uppercase tracking-[.15em] flex items-center gap-2.5">
+          <i class="fa-solid fa-lightbulb text-[#EA580C]"></i>
+          Tips for best results
+        </p>
+        <div class="grid sm:grid-cols-3 gap-4">
+          <div class="tip-card">
+            <div class="tip-icon bg-[#eafaf1] border-[#48c479]/20"><i class="fa-solid fa-sun text-[#48c479] text-[14px]"></i></div>
+            <div>
+              <p class="text-[14px] font-bold text-[#1c1c1c]">Good Lighting</p>
+              <p class="text-[12px] text-[#93959f] mt-1 font-medium">Use natural light for better detection</p>
+            </div>
+          </div>
+          <div class="tip-card">
+            <div class="tip-icon bg-[#FFF7ED] border-[#EA580C]/20"><i class="fa-solid fa-arrows-left-right text-[#EA580C] text-[14px]"></i></div>
+            <div>
+              <p class="text-[14px] font-bold text-[#1c1c1c]">Keep Separated</p>
+              <p class="text-[12px] text-[#93959f] mt-1 font-medium">Spread items apart on the surface</p>
+            </div>
+          </div>
+          <div class="tip-card">
+            <div class="tip-icon bg-[#ede9fe] border-[#7c3aed]/20"><i class="fa-solid fa-hat-wizard text-[#7c3aed] text-[14px]"></i></div>
+            <div>
+              <p class="text-[14px] font-bold text-[#1c1c1c]">Pick a Chef</p>
+              <p class="text-[12px] text-[#93959f] mt-1 font-medium">Get personalized recipe suggestions</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+  var currentStream = null;
+  var facingMode = 'environment';
+  var scannedIngredients = [];
+  var categoryData = null;
+  var activeCategory = null;
+  var selectedChef = 'classic';
+  var cameraReady = false;
+  var isScanning = false;
+  var capturedObjectURL = null;
+
+  var aiCache = {};
+
+  function $(id) { return document.getElementById(id); }
+  function show(el) { if (typeof el === 'string') el = $(el); if (el) el.style.display = ''; }
+  function hide(el) { if (typeof el === 'string') el = $(el); if (el) el.style.display = 'none'; }
+
+  // ═══════════════ PERSISTENT STATE MANAGEMENT ═══════════════
+  function saveScannerState() {
+    try {
+      localStorage.setItem('rs_scanned_ingredients', JSON.stringify(scannedIngredients));
+      localStorage.setItem('rs_scanner_chef', selectedChef);
+      if (categoryData) localStorage.setItem('rs_scanner_results', JSON.stringify(categoryData));
+      if (activeCategory) localStorage.setItem('rs_scanner_active_cat', activeCategory);
+    } catch(e) {}
+  }
+
+  function clearScannerState() {
+    try {
+      localStorage.removeItem('rs_scanned_ingredients');
+      localStorage.removeItem('rs_scanner_chef');
+      localStorage.removeItem('rs_scanner_results');
+      localStorage.removeItem('rs_scanner_active_cat');
+    } catch(e) {}
+  }
+
+  function loadScannerState() {
+    try {
+      var savedIngs = localStorage.getItem('rs_scanned_ingredients');
+      var savedChef = localStorage.getItem('rs_scanner_chef');
+      var savedResults = localStorage.getItem('rs_scanner_results');
+      var savedActiveCat = localStorage.getItem('rs_scanner_active_cat');
+
+      if (savedIngs) {
+        scannedIngredients = JSON.parse(savedIngs);
+        if (scannedIngredients.length > 0) {
+          renderChips();
+        }
+      }
+      if (savedChef) {
+        selectedChef = savedChef;
+        document.querySelectorAll('.chef-card').forEach(function(c) {
+          var isSel = c.getAttribute('data-chef') === selectedChef;
+          c.classList.toggle('selected', isSel);
+          var chk = c.querySelector('.chef-check');
+          if (chk) chk.style.display = isSel ? '' : 'none';
+        });
+      }
+      if (savedResults) {
+        categoryData = JSON.parse(savedResults);
+        if (savedActiveCat) activeCategory = savedActiveCat;
+        else if (categoryData.categories && categoryData.categories.length > 0) activeCategory = categoryData.categories[0].name;
+        
+        hide('chefSection');
+        renderAICategories();
+      }
+    } catch(e) {
+      console.warn('Failed to load scanner state', e);
+    }
+  }
+
+  function showCapturedPreview(imageSource, isObjectURL) {
+    var preview = $('capturedPreview');
+    var video = $('cameraFeed');
+    var guides = $('cornerGuides');
+    var retakeBtn = $('retakeBtn');
+
+    if (isObjectURL) {
+      capturedObjectURL = imageSource;
+      preview.src = imageSource;
+    } else {
+      preview.src = imageSource;
+    }
+
+    hide(video);
+    hide(guides);
+    show(preview);
+    show(retakeBtn);
+  }
+
+  function restoreCameraFeed() {
+    var preview = $('capturedPreview');
+    var video = $('cameraFeed');
+    var guides = $('cornerGuides');
+    var retakeBtn = $('retakeBtn');
+
+    hide(preview);
+    hide(retakeBtn);
+    preview.src = '';
+
+    if (capturedObjectURL) {
+      URL.revokeObjectURL(capturedObjectURL);
+      capturedObjectURL = null;
+    }
+
+    if (cameraReady) {
+      show(video);
+      show(guides);
+    }
+  }
+
+  function isSecureContext() {
+    return window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
+  }
+
+  function startCamera() {
+    var video = $('cameraFeed'), noCamera = $('noCamera'), httpWarning = $('httpWarning');
+    var loading = $('cameraLoading'), guides = $('cornerGuides');
+    hide(noCamera); hide(httpWarning); hide(video); hide(guides); show(loading);
+
+    if (!navigator.mediaDevices || !isSecureContext()) {
+      hide(loading);
+      if (!isSecureContext()) show(httpWarning);
+      else show(noCamera);
+      return;
+    }
+
+    if (currentStream) currentStream.getTracks().forEach(function(t) { t.stop(); });
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode } }).then(function(stream) {
+      currentStream = stream;
+      video.srcObject = stream;
+      video.style.display = '';
+      show(guides); hide(loading); cameraReady = true;
+      video.play().catch(function() {});
+    }).catch(function() {
+      hide(loading); show(noCamera); cameraReady = false;
+    });
+  }
+
+  window.switchCamera = function() {
+    facingMode = (facingMode === 'environment') ? 'user' : 'environment';
+    startCamera();
+  };
+
+  window.captureImage = function() {
+    if (!cameraReady || isScanning) return;
+    var video = $('cameraFeed'), canvas = $('captureCanvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    var dataURL = canvas.toDataURL('image/jpeg', 0.85);
+    showCapturedPreview(dataURL, false);
+
+    canvas.toBlob(function(blob) { if (blob) sendImageForScan(blob); }, 'image/jpeg', 0.85);
+  };
+
+  window.retakeImage = function() {
+    restoreCameraFeed();
+    $('uploadLabel').classList.remove('has-file');
+    $('uploadText').textContent = 'Upload';
+    $('uploadInput').value = '';
+  };
+
+  $('uploadInput').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    $('uploadLabel').classList.add('has-file');
+    $('uploadText').textContent = 'Uploaded ✓';
+
+    var objectURL = URL.createObjectURL(file);
+    showCapturedPreview(objectURL, true);
+
+    sendImageForScan(file);
+  });
+
+  function sendImageForScan(blob) {
+    if (isScanning) return;
+    isScanning = true;
+    var statusEl = $('scanStatus'), statusText = $('scanStatusText');
+    var scanLine = $('scanLine');
+    show(statusEl); statusText.textContent = 'Analyzing ingredients...';
+    statusEl.style.background = 'rgba(0,0,0,0.6)';
+    scanLine.classList.add('active');
+    
+    var formData = new FormData();
+    formData.append('image', blob, 'scan.jpg');
+    
+    fetch('/api/scan', { method: 'POST', body: formData })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        isScanning = false;
+        scanLine.classList.remove('active');
+        if (data.ingredients && data.ingredients.length > 0) {
+          statusText.textContent = 'Found ' + data.ingredients.length + ' ingredients!';
+          statusEl.style.background = 'rgba(72,196,121,0.95)';
+          data.ingredients.forEach(function(ing) {
+            if (scannedIngredients.indexOf(ing) === -1) scannedIngredients.push(ing);
+          });
+          renderChips();
+          setTimeout(function() {
+            hide(statusEl);
+            $('uploadLabel').classList.remove('has-file');
+            $('uploadText').textContent = 'Upload';
+          }, 2500);
+        } else {
+          statusText.textContent = data.error || 'No ingredients detected';
+          statusEl.style.background = 'rgba(231,76,60,0.95)';
+          setTimeout(function() { hide(statusEl); }, 3000);
+        }
+      })
+      .catch(function() {
+        isScanning = false;
+        scanLine.classList.remove('active');
+        statusText.textContent = 'Network error';
+        statusEl.style.background = 'rgba(231,76,60,0.95)';
+        setTimeout(function() { hide(statusEl); }, 3000);
+      });
+  }
+
+  function renderChips() {
+    var container = $('scannedChips');
+    saveScannerState(); // Persist state
+    if (scannedIngredients.length === 0) {
+      hide('scannedSection'); hide('chefSection'); hide('categorySection'); show('tipsSection');
+      return;
+    }
+    show('scannedSection'); show('chefSection'); hide('tipsSection');
+    container.innerHTML = scannedIngredients.map(function(name, i) {
+      return '<span class="scanned-chip">' + name + '<button onclick="removeChip(' + i + ')"><i class="fa-solid fa-xmark text-[8px]"></i></button></span>';
+    }).join('');
+  }
+
+  window.removeChip = function(i) {
+    scannedIngredients.splice(i, 1);
+    renderChips();
+  };
+
+  window.clearScanned = function() {
+    scannedIngredients = [];
+    categoryData = null;
+    activeCategory = null;
+    clearScannerState(); // Clear persisted state
+    renderChips();
+    resetChefSelection();
+    hide('categorySection'); hide('aiLoading'); hide('emptyState');
+    restoreCameraFeed();
+    $('uploadLabel').classList.remove('has-file');
+    $('uploadText').textContent = 'Upload';
+    $('uploadInput').value = '';
+  };
+
+  window.addManualIngredient = function() {
+    var input = $('manualAddInput');
+    var val = input.value.trim().toLowerCase();
+    if (!val || scannedIngredients.indexOf(val) !== -1) { input.value = ''; return; }
+    scannedIngredients.push(val);
+    renderChips();
+    input.value = '';
+  };
+
+  $('manualAddInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); addManualIngredient(); }
+  });
+
+  function resetChefSelection() {
+    document.querySelectorAll('.chef-card').forEach(function(c) {
+      c.classList.remove('selected');
+      var chk = c.querySelector('.chef-check');
+      if (chk) chk.style.display = 'none';
+    });
+  }
+
+  window.selectChef = function(style) {
+    selectedChef = style;
+    document.querySelectorAll('.chef-card').forEach(function(c) {
+      var isSel = c.getAttribute('data-chef') === style;
+      c.classList.toggle('selected', isSel);
+      var chk = c.querySelector('.chef-check');
+      if (chk) chk.style.display = isSel ? '' : 'none';
+    });
+    saveScannerState(); // Persist state
+    fetchAISuggestions();
+  };
+
+  window.showChefSection = function() {
+    hide('categorySection'); hide('emptyState'); show('chefSection');
+  };
+
+  function getCacheKey() {
+    var sorted = scannedIngredients.slice().sort();
+    return sorted.join('|');
+  }
+
+  function fetchAISuggestions(forceBypassCache) {
+    if (scannedIngredients.length === 0) return;
+
+    var cacheKey = getCacheKey();
+    if (!forceBypassCache && aiCache[cacheKey]) {
+      categoryData = aiCache[cacheKey];
+      activeCategory = categoryData.categories[0].name;
+      hide('chefSection');
+      renderAICategories();
+      return;
+    }
+
+    hide('chefSection'); hide('categorySection'); hide('emptyState'); show('aiLoading');
+    
+    var chefMessages = {
+      classic: 'Chef is cooking up ideas...',
+      quick: 'Quick chef is finding fast recipes...',
+      healthy: 'Healthy chef is picking nutritious options...',
+      comfort: 'Comfort chef is choosing indulgent dishes...'
+    };
+    $('aiLoadingChef').textContent = chefMessages[selectedChef] || 'Chef is cooking up ideas...';
+    $('aiLoadingText').textContent = 'Analyzing ' + scannedIngredients.length + ' ingredients...';
+
+    fetch('/api/scan/ai-suggest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ingredients: scannedIngredients })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      hide('aiLoading');
+      if (data.total_matches > 0 && data.categories && data.categories.length > 0) {
+        categoryData = data;
+        aiCache[cacheKey] = data;
+        activeCategory = data.categories[0].name;
+        saveScannerState(); // Persist state
+        renderAICategories();
+      } else {
+        show('emptyState');
+      }
+    })
+    .catch(function() {
+      hide('aiLoading');
+      show('emptyState');
+    });
+  }
+
+  window.refetchAI = function() {
+    var cacheKey = scannedIngredients.slice().sort().join('|');
+    delete aiCache[cacheKey];
+    fetchAISuggestions();
+  };
+
+  function renderAICategories() {
+    show('categorySection');
+    $('categorySubtitle').textContent = categoryData.total_matches + ' recipes in ' + categoryData.categories.length + ' categories';
+    
+    var strip = $('categoryStrip');
+    strip.innerHTML = categoryData.categories.map(function(cat) {
+      var isActive = cat.name === activeCategory;
+      var safeName = cat.name.replace(/'/g, "\\'");
+      return '<button onclick="switchCategory(\'' + safeName + '\')" class="cat-btn ' + (isActive ? 'active' : '') + '">' + cat.name + ' <span style="opacity:0.7">' + cat.recipes.length + '</span></button>';
+    }).join('');
+    
+    renderCatRecipes(activeCategory);
+  }
+
+  window.switchCategory = function(name) {
+    activeCategory = name;
+    saveScannerState(); // Persist state
+    renderAICategories();
+  };
+
+  function renderCatRecipes(catName) {
+    var container = $('categoryRecipes');
+    var catData = categoryData.categories.find(function(c) { return c.name === catName; });
+    if (!catData) return;
+
+    var html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">';
+    catData.recipes.forEach(function(r) {
+      var totalTime = (r.prep_time_minutes || 0) + (r.cook_time_minutes || 0);
+      var viewUrl = r.view_url || '#'; 
+      
+      var colors = [
+        ['#FFB75E', '#ED8F47'], ['#FF9A9E', '#FAD0C4'], ['#A18CD1', '#FBC2EB'],
+        ['#84FAB0', '#8FD3F4'], ['#FCCB90', '#D57EEB'], ['#E0C3FC', '#8EC5FC'],
+        ['#F093FB', '#F5576C'], ['#4FACFE', '#00F2FE'], ['#43E97B', '#38F9D7'],
+        ['#FA709A', '#FEE140']
+      ];
+      var colorPair = colors[Math.abs(hashCode(r.name)) % colors.length];
+      var missingCount = (r.missing_ingredients || []).length;
+      var haveAll = r.have_all_ingredients;
+
+      var queryTerms = encodeURIComponent(r.name).replace(/%20/g, '+');
+      var youtubeVideoUrl = 'https://www.youtube.com/results?search_query=how+to+cook+' + queryTerms;
+
+      html += '\
+      <div class="group block bg-white border-2 border-[#E9E9EB] rounded-[28px] overflow-hidden transition-all duration-300 hover:border-[#EA580C] hover:shadow-2xl hover:shadow-[#EA580C]/10 hover:-translate-y-2">\
+        <a href="' + viewUrl + '" class="no-underline">\
+          <div class="h-44 flex items-center justify-center text-7xl relative overflow-hidden" style="background: linear-gradient(135deg, ' + colorPair[0] + ', ' + colorPair[1] + ');">\
+            <div class="absolute inset-0 bg-black/5"></div>\
+            <span class="relative z-10 drop-shadow-lg transition-transform duration-500 group-hover:scale-110">' + (r.emoji || '🍽️') + '</span>\
+          </div>\
+        </a>\
+        <div class="p-6 space-y-4">\
+          <div class="flex items-start justify-between gap-2">\
+            <a href="' + viewUrl + '" class="no-underline flex-1">\
+              <h3 class="text-[17px] font-bold text-[#1c1c1c] leading-tight group-hover:text-[#EA580C] transition-colors">' + r.name + '</h3>\
+            </a>\
+            <a href="' + youtubeVideoUrl + '" target="_blank" rel="noopener" class="video-chip-link flex-shrink-0" title="Watch tutorial on YouTube">\
+              <i class="fa-solid fa-video"></i><span>Watch</span>\
+            </a>\
+          </div>\
+          <p class="text-[13px] text-[#686b78] line-clamp-2 leading-relaxed">' + (r.description || 'A delicious recipe crafted just for you.') + '</p>\
+          <div class="flex items-center gap-4 text-[12px] font-semibold text-[#93959f]">\
+            <span class="flex items-center gap-1.5"><i class="fa-regular fa-clock text-[10px]"></i> ' + totalTime + 'm</span>\
+            <span class="text-[#E9E9EB]">|</span>\
+            <span>' + (r.difficulty || 'Medium') + '</span>\
+            <span class="text-[#E9E9EB]">|</span>\
+            <span>' + (r.servings || 2) + ' srv</span>\
+          </div>\
+          <div class="flex items-center justify-between pt-4 border-t border-[#F5F5F5]">\
+            <span class="text-[12px] font-bold ' + (haveAll ? 'text-[#48c479]' : 'text-[#d97706]') + '">\
+              ' + (haveAll ? '<i class="fa-solid fa-circle-check mr-1.5"></i>Have all' : '<i class="fa-solid fa-cart-shopping mr-1.5"></i>+' + missingCount + ' needed') + '\
+            </span>\
+            <a href="' + viewUrl + '" class="inline-flex items-center gap-2 text-[13px] font-bold text-[#EA580C] no-underline">\
+              View Recipe <i class="fa-solid fa-arrow-right text-[11px] transition-transform duration-300 group-hover:translate-x-1"></i>\
+            </a>\
+          </div>\
+        </div>\
+      </div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  function hashCode(str) {
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return hash;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    loadScannerState(); // Restore previous session if user navigated back
+    setTimeout(startCamera, 300);
+  });
+})();
+</script>
+{% endblock %}

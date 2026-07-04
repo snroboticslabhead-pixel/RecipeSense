@@ -1,0 +1,64 @@
+<header class="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#E9E9EB]">
+    <div class="w-full px-8 lg:px-12 h-[70px] flex items-center justify-between">
+        <a href="/" class="flex items-center gap-3 no-underline shrink-0">
+            <img src="https://i.ibb.co/8DGHZKXt/Chat-GPT-Image-Jun-25-2026-04-14-58-PM-1.png" alt="RecipeSense" class="w-10 h-10 object-contain">
+            <span class="font-bold text-[20px] text-[#1c1c1c] tracking-tight">RecipeSense</span>
+        </a>
+        <nav class="flex items-center gap-2">
+            <a href="/" class="px-5 py-2.5 text-[14px] font-medium rounded-full transition-all no-underline {% if request.path=='/' %}text-[#FF5200] bg-[#FFF0E8]{% else %}text-[#686b78] hover:text-[#1c1c1c] hover:bg-[#F8F8F8]{% endif %}">Home</a>
+            <a href="/recipes" class="px-5 py-2.5 text-[14px] font-medium rounded-full transition-all no-underline {% if request.path=='/recipes' %}text-[#FF5200] bg-[#FFF0E8]{% else %}text-[#686b78] hover:text-[#1c1c1c] hover:bg-[#F8F8F8]{% endif %}">Recipes</a>
+            <a href="/scanner" class="px-5 py-2.5 text-[14px] font-medium rounded-full transition-all no-underline {% if request.path=='/scanner' %}text-[#FF5200] bg-[#FFF0E8]{% else %}text-[#686b78] hover:text-[#1c1c1c] hover:bg-[#F8F8F8]{% endif %}">Scan</a>
+            <a href="/ingredients" class="px-5 py-2.5 text-[14px] font-medium rounded-full transition-all no-underline {% if request.path=='/ingredients' %}text-[#FF5200] bg-[#FFF0E8]{% else %}text-[#686b78] hover:text-[#1c1c1c] hover:bg-[#F8F8F8]{% endif %}">Pantry</a>
+            
+            <div class="w-px h-6 bg-[#E9E9EB] mx-2"></div>
+
+            {% if is_logged_in and current_user %}
+                <a href="/profile" class="w-10 h-10 rounded-full bg-[#FF5200] text-white flex items-center justify-center font-bold text-[14px] hover:scale-105 transition-transform shadow-md shadow-[#FF5200]/20 border-2 border-white" title="My Profile">
+                    {{ current_user.username[0]|upper }}
+                </a>
+                <button class="w-10 h-10 rounded-full bg-[#F8F8F8] text-[#686b78] flex items-center justify-center hover:bg-[#FFF0E8] hover:text-[#FF5200] transition-all relative" title="Notifications">
+                    <i class="fa-solid fa-bell text-[16px]"></i>
+                    <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                </button>
+            {% else %}
+                <a href="/login" class="px-5 py-2.5 text-[14px] font-bold rounded-full transition-all no-underline bg-[#FF5200] text-white hover:bg-[#E64A00] shadow-md shadow-[#FF5200]/20 flex items-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket text-[12px]"></i> Login
+                </a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md z-50 md:hidden safe-b border-t border-[#E9E9EB]">
+    <div class="flex items-end justify-around h-[65px]">
+        <a href="/" class="flex-1 flex flex-col items-center justify-center gap-1 {% if request.path=='/' %}text-[#FF5200]{% else %}text-[#93959f]{% endif %} no-underline">
+            <i class="fa-solid fa-house text-[18px]"></i>
+            <span class="text-[10px] font-medium">Home</span>
+        </a>
+        <a href="/recipes" class="flex-1 flex flex-col items-center justify-center gap-1 {% if request.path=='/recipes' %}text-[#FF5200]{% else %}text-[#93959f]{% endif %} no-underline">
+            <i class="fa-solid fa-book-open text-[18px]"></i>
+            <span class="text-[10px] font-medium">Recipes</span>
+        </a>
+        <a href="/scanner" class="flex-1 flex flex-col items-center justify-center -mt-5 no-underline">
+            <div class="w-12 h-12 bg-[#FF5200] rounded-full flex items-center justify-center text-white border-4 border-white shadow-lg">
+                <i class="fa-solid fa-camera text-[16px]"></i>
+            </div>
+        </a>
+        <a href="/ingredients" class="flex-1 flex flex-col items-center justify-center gap-1 {% if request.path=='/ingredients' %}text-[#FF5200]{% else %}text-[#93959f]{% endif %} no-underline">
+            <i class="fa-solid fa-basket-shopping text-[18px]"></i>
+            <span class="text-[10px] font-medium">Pantry</span>
+        </a>
+        
+        {% if is_logged_in and current_user %}
+            <a href="/profile" class="flex-1 flex flex-col items-center justify-center gap-1 {% if request.path=='/profile' %}text-[#FF5200]{% else %}text-[#93959f]{% endif %} no-underline">
+                <i class="fa-solid fa-circle-user text-[18px]"></i>
+                <span class="text-[10px] font-medium">Profile</span>
+            </a>
+        {% else %}
+            <a href="/login" class="flex-1 flex flex-col items-center justify-center gap-1 text-[#FF5200] no-underline">
+                <i class="fa-solid fa-right-to-bracket text-[18px]"></i>
+                <span class="text-[10px] font-bold">Login</span>
+            </a>
+        {% endif %}
+    </div>
+</nav>
