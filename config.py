@@ -5,7 +5,7 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "smart-cooking-ai-secret-key-2024")
 
     # Gemini AI Configuration
-    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AQ.Ab8RN6K-6q9ss9F5PKJz-V23kVZwaPNxOyMVdj5UD5xGRPG6ZA")
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyD0-wbHtJYgIuGIgjlG9ZrZVTPPCV8WbDs")
     GEMINI_MODEL = "gemini-2.5-flash"
 
     # Groq AI Configuration
