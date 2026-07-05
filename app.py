@@ -5,14 +5,15 @@ import json
 import base64
 import zlib
 import hashlib
+import uuid
 from urllib.parse import quote, unquote
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, Response, stream_with_context
 from werkzeug.security import check_password_hash
 from google import genai
 from PIL import Image
-from openai import OpenAI  # Added for Groq integration
+from openai import OpenAI
 from config import Config
-from database import (init_db, add_favorite, remove_favorite, get_favorites, is_favorited, 
+from database import (init_db, add_favorite, remove_favorite, get_favorites, is_favorited,
                       add_search_history, get_search_history, save_preferences, get_preferences,
                       create_user, get_user_by_email, get_user_by_id,
                       get_search_history_count, clear_search_history, clear_all_favorites, delete_user_account)
@@ -21,7 +22,7 @@ from models import RecipeManager, ScanResult
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Updated High-Quality Real Images
+# ── Image Maps ──
 RECIPE_IMAGES = {
     1: "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=800&q=80",
     2: "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=800&q=80",
@@ -70,7 +71,7 @@ INGREDIENT_EMOJIS = {
     "rice": "🍚", "eggs": "🥚", "cheese": "🧀", "butter": "🧈",
     "olive oil": "🫒", "pasta": "🍝", "milk": "🥛", "salt": "🧂",
     "bell pepper": "🫑", "carrot": "🥕", "potato": "🥔", "broccoli": "🥦",
-    "cilantro": "🌿", "parsley": "🌿", "basil": "🌿", "ginger": "𫚔",
+    "cilantro": "🌿", "parsley": "🌿", "basil": "🌿", "ginger": "🫚",
     "chili powder": "🌶️", "cumin": "🫙", "turmeric": "🟡", "soy sauce": "🥢",
     "lemon": "🍋", "lime": "🍋", "avocado": "🥑", "mushroom": "🍄",
     "shrimp": "🦐", "fish": "🐟", "beef": "🥩", "yogurt": "🥄",
@@ -110,6 +111,7 @@ POPULAR_INGREDIENT_IMAGES = {
     "salt": "https://images.unsplash.com/photo-1518110925495-5fe2fda0442c?w=200&h=200&fit=crop&q=80",
 }
 
+# ── Template Filters ──
 @app.template_filter('popular_ingredient_image')
 def popular_ingredient_image_filter(value):
     return POPULAR_INGREDIENT_IMAGES.get(value.lower(), "")
@@ -142,28 +144,39 @@ def quickpick_image_filter(name):
 def ingredient_emoji_filter(value):
     return INGREDIENT_EMOJIS.get(value.lower(), "🥘")
 
+# ── Initialize Database ──
 init_db()
 
-# Initialize Gemini for Vision (Image Scanning) and Chat
-try:
-    gemini_client = genai.Client(api_key=Config.GEMINI_API_KEY)
-except Exception as e:
-    print(f"Gemini Initialization Error: {e}")
-    gemini_client = None
+# ── AI Client Initialization (Safe - no crash on missing keys) ──
+gemini_client = None
+groq_client = None
 
-# Initialize Groq for Recipe Generation (Fast LLM)
-try:
-    groq_client = OpenAI(
-        api_key=Config.GROQ_API_KEY,
-        base_url="https://api.groq.com/openai/v1",
-    )
-except Exception as e:
-    print(f"Groq Initialization Error: {e}")
-    groq_client = None
+if Config.is_gemini_available():
+    try:
+        gemini_client = genai.Client(api_key=Config.GEMINI_API_KEY)
+        print("[INIT] Gemini client initialized successfully.")
+    except Exception as e:
+        print(f"[INIT] Gemini initialization failed: {e}")
+        gemini_client = None
+else:
+    print("[INIT] WARNING: GEMINI_API_KEY not set. AI Scanner and Chat will be unavailable.")
+
+if Config.is_groq_available():
+    try:
+        groq_client = OpenAI(
+            api_key=Config.GROQ_API_KEY,
+            base_url="https://api.groq.com/openai/v1",
+        )
+        print("[INIT] Groq client initialized successfully.")
+    except Exception as e:
+        print(f"[INIT] Groq initialization failed: {e}")
+        groq_client = None
+else:
+    print("[INIT] WARNING: GROQ_API_KEY not set. AI Recipe Suggestions will be unavailable.")
 
 recipe_manager = RecipeManager()
 
-# ── Context Processor (Makes user state available in ALL templates) ──
+# ── Context Processor ──
 @app.context_processor
 def inject_user_state():
     user_id = session.get('user_id')
@@ -172,11 +185,11 @@ def inject_user_state():
         if user:
             return dict(is_logged_in=True, current_user=user)
         else:
-            # CRITICAL FIX: Stale session (user deleted from DB but cookie remains)
             session.pop('user_id', None)
             session.pop('username', None)
     return dict(is_logged_in=False, current_user=None)
 
+# ── Category Mapping ──
 CATEGORY_MAP = {
     "Curries & Gravies": ["curry", "dal", "tadka", "gravy", "masala"],
     "Rice & Grains": ["rice", "biryani", "fried rice", "pilaf", "grain"],
@@ -211,17 +224,11 @@ def categorize_recipes(matched_results):
             categories.setdefault("Other Dishes", []).append(item)
     return {k: v for k, v in sorted(categories.items(), key=lambda x: -len(x[1])) if v}
 
-# ── Updated Device ID to use User ID when logged in ──
 def get_device_id():
     if 'user_id' in session:
-        return f"user_{session['user_id']}" # Ties DB records to the logged-in user
-    
-    # Fallback to existing device_id logic for guests
+        return f"user_{session['user_id']}"
     if "device_id" not in session:
-        session["device_id"] = session.get("device_id", request.headers.get("X-Device-ID", "unknown"))
-        if session["device_id"] == "unknown":
-            import uuid
-            session["device_id"] = str(uuid.uuid4())[:12]
+        session["device_id"] = request.headers.get("X-Device-ID", str(uuid.uuid4())[:12])
     return session["device_id"]
 
 def extract_retry_seconds(error_message: str) -> int:
@@ -319,13 +326,7 @@ def normalize_recipe(recipe, source="database"):
     steps = []
     for i, s in enumerate(raw_steps):
         if isinstance(s, str):
-            steps.append({
-                "index": i + 1,
-                "title": f"Step {i+1}",
-                "instruction": s,
-                "time_minutes": None,
-                "difficulty": None,
-            })
+            steps.append({"index": i + 1, "title": f"Step {i+1}", "instruction": s, "time_minutes": None, "difficulty": None})
         elif isinstance(s, dict):
             steps.append({
                 "index": i + 1,
@@ -337,12 +338,16 @@ def normalize_recipe(recipe, source="database"):
     r["steps"] = steps
 
     r["timeline"] = {
-        "prep":    r["prep_time"],
-        "cook":    r["cook_time"],
-        "rest":    r.get("rest_time", 0),
-        "total":   r["prep_time"] + r["cook_time"] + r.get("rest_time", 0),
+        "prep":  r["prep_time"],
+        "cook":  r["cook_time"],
+        "rest":  r.get("rest_time", 0),
+        "total": r["prep_time"] + r["cook_time"] + r.get("rest_time", 0),
     }
     return r
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  PAGE ROUTES
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @app.route('/')
 def index():
@@ -352,34 +357,25 @@ def index():
     cuisines = recipe_manager.get_all_cuisines()
     featured = recipe_manager.search()[:6]
     recipes_count = len(recipe_manager.get_all())
-    
+
     popular = ["chicken breast", "garlic", "onion", "tomato", "rice", "eggs", "cheese", "butter", "olive oil", "pasta", "milk", "salt"]
     all_recipes = recipe_manager.get_all()
     popular_ing_data = []
     for ing in popular:
         count = sum(1 for r in all_recipes if any(ing == i["name"].lower().strip() for i in r.get("ingredients", [])))
-        popular_ing_data.append({
-            "name": ing,
-            "emoji": INGREDIENT_EMOJIS.get(ing, "🥘"),
-            "image": POPULAR_INGREDIENT_IMAGES.get(ing, ""),
-            "count": count
-        })
-        
-    return render_template(
-        'index.html', 
-        featured=featured, 
-        cuisines=cuisines, 
-        fav_ids=fav_ids, 
-        history=history, 
-        recipes_count=recipes_count,
-        popular_ingredients=popular_ing_data
-    )
+        popular_ing_data.append({"name": ing, "emoji": INGREDIENT_EMOJIS.get(ing, "🥘"), "image": POPULAR_INGREDIENT_IMAGES.get(ing, ""), "count": count})
+
+    return render_template('index.html', featured=featured, cuisines=cuisines, fav_ids=fav_ids, history=history, recipes_count=recipes_count, popular_ingredients=popular_ing_data)
 
 @app.route('/scanner')
 def scanner():
     device_id = get_device_id()
     fav_ids = get_favorites(device_id)
-    return render_template('scanner.html', fav_ids=fav_ids)
+    ai_status = {
+        "scanner": bool(gemini_client),
+        "suggest": bool(groq_client),
+    }
+    return render_template('scanner.html', fav_ids=fav_ids, ai_status=ai_status)
 
 @app.route('/ingredients')
 def ingredients():
@@ -435,11 +431,9 @@ def recipe_details(recipe_id):
     recipe = recipe_manager.get_by_id(recipe_id)
     if not recipe:
         return redirect(url_for('recipes'))
-    
     recipe = normalize_recipe(recipe, source="database")
     related_raw = [r for r in recipe_manager.get_by_cuisine(recipe.get("cuisine", "")) if r["id"] != recipe_id][:3]
     related = [normalize_recipe(r, source="database") for r in related_raw]
-    
     is_fav = recipe_id in fav_ids
     return render_template('recipe_details.html', recipe=recipe, related=related, is_fav=is_fav, fav_ids=fav_ids, search_ingredients=[])
 
@@ -452,31 +446,19 @@ def recipe_ai():
     recipe = None
     if encoded:
         recipe = decode_ai_recipe(encoded)
-
     if not recipe:
         cache_key = request.args.get('k', '')
         recipe = (session.get("ai_recipe_cache") or {}).get(cache_key)
-
     if not recipe:
         return redirect(url_for('scanner'))
 
     recipe = normalize_recipe(recipe, source="ai")
-
     h = hashlib.sha1(json.dumps(recipe, sort_keys=True).encode()).hexdigest()[:10]
     cache = session.setdefault("ai_recipe_cache", {})
     cache[h] = recipe
     session.modified = True
 
-    related = []
-
-    return render_template(
-        'recipe_details.html',
-        recipe=recipe,
-        related=related,
-        is_fav=False,
-        fav_ids=fav_ids,
-        search_ingredients=[],
-    )
+    return render_template('recipe_details.html', recipe=recipe, related=[], is_fav=False, fav_ids=fav_ids, search_ingredients=[])
 
 @app.route('/favorites')
 def favorites():
@@ -486,14 +468,23 @@ def favorites():
     fav_recipes = [r for r in fav_recipes if r is not None]
     return render_template('favorites.html', recipes=fav_recipes, fav_ids=fav_ids)
 
-# ── Authentication Routes ──
+@app.route('/chat')
+def chat():
+    device_id = get_device_id()
+    fav_ids = get_favorites(device_id)
+    ai_available = bool(gemini_client)
+    return render_template('chat.html', fav_ids=fav_ids, recipe_images=RECIPE_IMAGES, ai_available=ai_available)
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  AUTH ROUTES
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         user = get_user_by_email(email)
-        
         if user and check_password_hash(user['password_hash'], password):
             session['user_id'] = user['id']
             session['username'] = user['username']
@@ -507,12 +498,10 @@ def register():
         username = request.form.get('username', '').strip()
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
-        
         if not username or not email or not password:
             return render_template('auth.html', mode='register', error="All fields are required.")
         if len(password) < 6:
             return render_template('auth.html', mode='register', error="Password must be at least 6 characters.")
-            
         user_id = create_user(username, email, password)
         if user_id:
             session['user_id'] = user_id
@@ -527,19 +516,15 @@ def logout():
     session.pop('username', None)
     return redirect(url_for('index'))
 
-# ── Profile Route ──
 @app.route('/profile')
 def profile():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-        
     device_id = get_device_id()
     fav_ids = get_favorites(device_id)
     prefs = get_preferences(device_id)
     cuisines = recipe_manager.get_all_cuisines()
     user = get_user_by_id(session['user_id'])
-    
-    # Calculate Stats
     history_count = get_search_history_count(device_id)
     created_at = user['created_at'] if user and user['created_at'] else None
     days_active = 1
@@ -550,20 +535,16 @@ def profile():
             days_active = max(1, (datetime.now() - created_date).days)
         except:
             pass
-            
     return render_template('profile.html', prefs=prefs, cuisines=cuisines, fav_ids=fav_ids, user=user, history_count=history_count, days_active=days_active)
 
-@app.route('/chat')
-def chat():
-    device_id = get_device_id()
-    fav_ids = get_favorites(device_id)
-    return render_template('chat.html', fav_ids=fav_ids, recipe_images=RECIPE_IMAGES)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  API ROUTES
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
-    """Streaming AI chat endpoint powered by Gemini."""
     if not gemini_client:
-        return jsonify({'error': 'AI chat is not available.'}), 503
+        return jsonify({'error': 'AI chat is unavailable. The GEMINI_API_KEY environment variable is not configured on the server.'}), 503
 
     data = request.get_json(silent=True) or {}
     user_message = data.get("message", "").strip()
@@ -579,9 +560,7 @@ def api_chat():
     recipe_index = []
     for r in recipe_manager.get_all():
         recipe_index.append({
-            "id": r["id"],
-            "name": r["name"],
-            "cuisine": r.get("cuisine", ""),
+            "id": r["id"], "name": r["name"], "cuisine": r.get("cuisine", ""),
             "difficulty": r.get("difficulty", ""),
             "time": r.get("prep_time", 0) + r.get("cook_time", 0),
             "ingredients": [ing["name"].lower() for ing in r.get("ingredients", [])]
@@ -648,7 +627,6 @@ def api_chat():
                     yield full_text[i:i + chunk_size]
                     time.sleep(0.015)
                 return
-
             except Exception as e:
                 error_msg = str(e)
                 if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
@@ -665,22 +643,23 @@ def api_chat():
                         continue
                     yield "**AI engine is currently busy.** Please try again in a moment."
                     return
+                # Handle 403 specifically
+                if "403" in error_msg or "PERMISSION_DENIED" in error_msg:
+                    yield "**Error:** API key permission denied. The Gemini API key may be invalid, leaked, or revoked. Please contact the admin to set a new API key in the server environment variables."
+                    return
                 yield f"**Error:** {error_msg}"
                 return
 
     return Response(
         stream_with_context(generate_stream()),
         mimetype='text/plain',
-        headers={
-            'Cache-Control': 'no-cache',
-            'X-Accel-Buffering': 'no',
-        }
+        headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'}
     )
 
 @app.route('/api/scan', methods=['POST'])
 def api_scan():
     if not gemini_client:
-        return jsonify({'error': 'AI scanner is not available.'}), 503
+        return jsonify({'error': 'AI scanner is unavailable. GEMINI_API_KEY is not configured on the server.'}), 503
     if 'image' not in request.files:
         return jsonify({'error': 'No image provided.'}), 400
     file = request.files['image']
@@ -720,6 +699,8 @@ def api_scan():
                 return jsonify({'ingredients': [], 'raw': raw_text, 'error': 'Could not parse'})
             except Exception as e:
                 error_msg = str(e)
+                if "403" in error_msg or "PERMISSION_DENIED" in error_msg:
+                    return jsonify({'error': 'API key permission denied. The Gemini API key is invalid or revoked. Contact admin to set a new key.'}), 403
                 if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
                     wait = extract_retry_seconds(error_msg)
                     if attempt < max_retries - 1:
@@ -738,10 +719,9 @@ def api_scan():
 
 @app.route('/api/scan/ai-suggest', methods=['POST'])
 def api_ai_suggest():
-    """Generates recipe suggestions using Groq for high-speed inference."""
     if not groq_client:
-        return jsonify({'error': 'AI recipe engine (Groq) is not available.'}), 503
-    
+        return jsonify({'error': 'AI recipe engine (Groq) is unavailable. GROQ_API_KEY is not configured on the server.'}), 503
+
     data = request.get_json(silent=True) or {}
     ingredients = data.get("ingredients", [])
     if not ingredients:
@@ -752,7 +732,7 @@ def api_ai_suggest():
 
     system_prompt = """You are a world-class professional chef. Your task is to generate diverse recipe suggestions based on the provided ingredients. 
 You must return ONLY a valid JSON object with the exact structure requested, no markdown, no explanation, no conversational text."""
-    
+
     user_prompt = f"""A user has these ingredients in their kitchen:
 {ingredients_str}
 
@@ -832,13 +812,13 @@ Return ONLY a valid JSON object with this EXACT structure, no markdown, no expla
                 ],
                 temperature=0.7,
                 max_tokens=8000,
-                response_format={"type": "json_object"} # Ensures valid JSON output
+                response_format={"type": "json_object"}
             )
-            
+
             raw_text = response.choices[0].message.content
             if not raw_text:
                 return jsonify({"total_matches": 0, "ingredients": ingredients_lower, "categories": [], "source": "ai", "error": "AI returned empty response."})
-            
+
             raw_text = raw_text.strip()
             parsed = safe_json_parse(raw_text)
 
@@ -865,10 +845,8 @@ Return ONLY a valid JSON object with this EXACT structure, no markdown, no expla
                         r.setdefault("steps", [])
                         r.setdefault("nutrition", {"calories": 0, "protein": "0g", "carbs": "0g", "fat": "0g", "fiber": "0g"})
                         r.setdefault("tags", [])
-                        
                         r["view_url"] = "/recipes/ai?recipe=" + encode_ai_recipe(r)
                         valid_recipes.append(r)
-
                     if valid_recipes:
                         valid_categories.append({"name": cat["name"], "recipes": valid_recipes})
                         total_recipes += len(valid_recipes)
@@ -891,6 +869,8 @@ Return ONLY a valid JSON object with this EXACT structure, no markdown, no expla
                     time.sleep(wait)
                     continue
                 return jsonify({'error': 'AI engine busy. Retry.', 'retry_after': wait}), 503
+            if "403" in error_msg or "PERMISSION_DENIED" in error_msg or "authentication" in error_msg.lower():
+                return jsonify({'error': 'Groq API key is invalid or revoked. Contact admin to set a new key.'}), 403
             return jsonify({'error': str(e), 'raw': error_msg}), 500
 
 @app.route('/api/scan/categories', methods=['POST'])
@@ -963,7 +943,6 @@ def api_toggle_favorite(recipe_id):
     recipe = recipe_manager.get_by_id(recipe_id)
     if not recipe:
         return jsonify({'error': 'Recipe not found'}), 404
-
     if request.method == 'POST':
         add_favorite(device_id, recipe_id)
         return jsonify({'status': 'added', 'recipe_id': recipe_id})
@@ -980,7 +959,6 @@ def api_preferences():
     save_preferences(device_id, data)
     return jsonify({'status': 'saved'})
 
-# ── Data Management & Account Deletion Routes ──
 @app.route('/api/history', methods=['DELETE'])
 def api_clear_history():
     if 'user_id' not in session: return jsonify({'error': 'Unauthorized'}), 401
@@ -997,11 +975,10 @@ def api_clear_all_favorites():
 def delete_account():
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 401
-    
     user_id = session['user_id']
     success = delete_user_account(user_id)
     if success:
-        session.clear() # Log them out immediately
+        session.clear()
         return jsonify({'status': 'deleted'})
     return jsonify({'error': 'Failed to delete account'}), 500
 
