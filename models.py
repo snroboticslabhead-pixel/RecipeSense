@@ -7,7 +7,7 @@ class RecipeManager:
 
     def __init__(self):
         self.recipes = []
-        self._ingredient_index = {}  # ingredient_name -> [recipe_ids]
+        self._ingredient_index = {}
         self._load()
 
     def _load(self):
@@ -58,7 +58,6 @@ class RecipeManager:
         return results
 
     def match_ingredients(self, user_ingredients, min_match=0.3):
-        """Score recipes by ingredient overlap with user's available ingredients."""
         user_ings = set(i.lower().strip() for i in user_ingredients if i.strip())
         results = []
 
@@ -84,7 +83,6 @@ class RecipeManager:
         return results
 
     def get_all_ingredients(self):
-        """Return a sorted unique list of all ingredient names."""
         names = set()
         for r in self.recipes:
             for ing in r.get("ingredients", []):
