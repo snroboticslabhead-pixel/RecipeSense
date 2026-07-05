@@ -16,7 +16,6 @@ def init_db():
     conn = get_db()
     cursor = conn.cursor()
     
-    # 1. Create tables if they don't exist
     cursor.executescript("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +53,7 @@ def init_db():
     CREATE INDEX IF NOT EXISTS idx_history_device ON search_history(device_id);
     """)
     
-    # 2. MIGRATION LOGIC: Fix older databases missing new columns
+    # Migration: Add columns if missing
     cursor.execute("PRAGMA table_info(preferences)")
     existing_columns = [row[1] for row in cursor.fetchall()]
     
@@ -70,7 +69,6 @@ def init_db():
         cursor.execute("ALTER TABLE preferences ADD COLUMN default_servings INTEGER DEFAULT 2")
     if 'notifications' not in existing_columns:
         cursor.execute("ALTER TABLE preferences ADD COLUMN notifications INTEGER DEFAULT 1")
-    # ---------------------------------------------------------
 
     conn.commit()
     conn.close()
@@ -90,7 +88,7 @@ def create_user(username, email, password):
         conn.commit()
         return cursor.lastrowid
     except sqlite3.IntegrityError:
-        return None  # Email already exists
+        return None
     finally:
         conn.close()
 
@@ -124,7 +122,7 @@ def delete_user_account(user_id):
     finally:
         conn.close()
 
-# ── Existing Functions (Unchanged) ──
+# ── Favorites Functions ──
 def add_favorite(device_id, recipe_id):
     conn = get_db()
     try:
@@ -160,6 +158,7 @@ def clear_all_favorites(device_id):
         conn.commit()
     finally: conn.close()
 
+# ── Search History Functions ──
 def add_search_history(device_id, query):
     conn = get_db()
     try:
@@ -189,6 +188,7 @@ def clear_search_history(device_id):
         conn.commit()
     finally: conn.close()
 
+# ── Preferences Functions ──
 def save_preferences(device_id, data):
     conn = get_db()
     try:
